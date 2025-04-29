@@ -1,0 +1,169 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+            
+model Event {
+  id Int @id @default(autoincrement())
+  name String
+  start_date DateTime
+  end_date DateTime
+  description String
+  event_image String?
+  location String
+  price Int // 0 = Free
+  total_seats Int
+  remaining_seats Int 
+  created_at DateTime @default(now())
+  organizer_id Int
+  //relations
+  organizer User @relation(fields:[organizer_id], references:[id])
+  category category
+  transactions Transaction[]
+  voucher Voucher[]
+  review Review[]
+
+  @@index([location])
+  @@index([category, start_date])
+}
+
+enum category {
+  Concert
+  Festival
+  Comedy
+  Museum
+  Others
+}
+
+model Voucher {
+  id Int @id @default(autoincrement())
+  event_id Int
+  voucher_code String @unique
+  discount_amount Int
+  voucher_start_date DateTime
+  voucher_end_date DateTime
+  max_usage Int
+  usage_amount Int
+  event Event @relation(fields: [event_id], references: [id])
+  transactions Transaction[]
+}
+
+model Points {
+  id Int @id @default(autoincrement())
+  user_id Int
+  points_amount Int
+  credited_at DateTime
+  expires_at DateTime
+  is_used Boolean @default(false)
+  is_expired Boolean @default(false)
+  user User @relation(fields: [user_id], references: [id]) 
+  transactions Transaction[]  
+}
+
+model Coupon {
+  id Int @id @default(autoincrement())
+  user_id Int
+  coupon_code String @unique
+  discount_amount Int
+  coupon_start_date DateTime
+  coupon_end_date DateTime
+  max_usage Int
+  use_count Int
+  user User @relation(fields: [user_id], references: [id]) 
+  transactions Transaction[]
+}
+
+model Transaction {
+  id Int @id @default(autoincrement())
+  user_id Int
+  coupon_id Int?
+  voucher_id Int?
+  points_id Int?
+  event_id Int
+  total_pay_amount Int
+  payment_proof String?
+  status transaction_status
+  created_at DateTime @default(now())
+  expires_at DateTime
+  updated_at DateTime @default(now())
+  quantity Int
+  unit_price Int
+  //relations
+  user User @relation(fields: [user_id], references: [id]) 
+  coupon Coupon? @relation(fields: [coupon_id], references: [id])
+  voucher Voucher? @relation(fields: [voucher_id], references: [id])
+  points Points? @relation(fields: [points_id], references: [id])
+  event Event @relation(fields: [event_id], references: [id])
+}
+
+enum transaction_status {
+  waiting_for_payment
+  waiting_for_admin_confirmation
+  confirmed
+  rejected
+  expired
+  canceled
+}
+
+model Review {
+  id Int @id @default(autoincrement())
+  event_id Int
+  user_id Int
+  rating Int @db.SmallInt
+  review String
+  created_at DateTime @default(now())
+  user User @relation(fields: [user_id], references: [id])
+  event Event @relation(fields: [event_id], references: [id])
+
+}
+
+model User {
+  id Int @id @default(autoincrement())
+  username String @unique
+  email String @unique
+  password String
+  user_referral_code String @unique
+  profile_picture String?
+  referer_id Int?
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now())
+// reset_token      String?   
+// reset_expires_at DateTime?
+
+  //Relations
+  role role
+  referralsMade   Referral[]  @relation(name: "UserReferrer")
+  referralsReceived Referral[] @relation(name: "UserReferred")
+  transactions Transaction[]
+  points Points[]
+  coupons Coupon[]
+  reviews Review[]
+  event Event[]
+}
+
+enum role {
+  customer
+  event_organizer
+  dev_admin
+}
+
+model Referral {
+  id Int @id @default(autoincrement())
+  user_id_referer Int
+  user_id_referred Int
+  points_reward Int
+  user_referrer User @relation(name: "UserReferrer", fields: [user_id_referer], references: [id])
+  user_referred User @relation(name: "UserReferred", fields: [user_id_referred], references: [id])
+}

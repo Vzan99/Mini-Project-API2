@@ -1,0 +1,11 @@
+PORT=8000
+
+# Connect to Supabase via connection pooling
+DATABASE_URL=
+
+# Direct connection to the database. Used for migrations
+DIRECT_URL=
+
+CLOUDINARY_NAME=
+CLOUDINARY_KEY=
+CLOUDINARY_SECRET=

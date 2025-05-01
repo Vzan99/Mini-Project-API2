@@ -5,7 +5,7 @@ export interface ICreateEventParam {
   startDate: Date;
   endDate: Date;
   description: string;
-  eventImage?: string;
+  file?: Express.Multer.File;
   location: string;
   price: number;
   totalSeats: number;

@@ -5,6 +5,7 @@ import { PORT } from "./config";
 import EventRouter from "./routers/event.router";
 import VoucherRouter from "./routers/voucher.router";
 import TransactionRouter from "./routers/transaction.router";
+import ReviewRouter from "./routers/review.router";
 
 import { AutoExpireTransactionTask } from "./utils/cron/expire-transaction-task";
 import { AutoCancelTransactionTask } from "./utils/cron/cancel-transaction-task";
@@ -33,6 +34,9 @@ app.use("/vouchers", VoucherRouter);
 
 //Transactions
 app.use("/transactions", TransactionRouter);
+
+//Reviews
+app.use("/reviews", ReviewRouter);
 
 //Port
 app.listen(port, () => {

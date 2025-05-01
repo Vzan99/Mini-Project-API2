@@ -8,11 +8,14 @@ async function CreateEventController(
   next: NextFunction
 ) {
   try {
-    const data = await CreateEventService(req.body);
+    const event = await CreateEventService({
+      ...req.body,
+      file: req.file, // Multer-attached file
+    });
 
-    res.status(201).send({
-      message: "Create Event Success!",
-      data,
+    res.status(201).json({
+      message: "Event created successfully",
+      data: event,
     });
   } catch (err) {
     next(err);

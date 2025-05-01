@@ -10,7 +10,12 @@ import { Multer } from "../utils/multer";
 const router = Router();
 
 //Create Event
-router.post("/", ReqValidator(createEventSchema), CreateEventController);
+router.post(
+  "/",
+  Multer().single("eventImage"),
+  ReqValidator(createEventSchema),
+  CreateEventController
+);
 
 //Update foto event (just for exercise - without service)
 router.patch("/image", Multer().single("file"), UpdateEventImageController);

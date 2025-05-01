@@ -151,45 +151,6 @@ async function CreateTransactionService(param: ICreateTransactionParam) {
   return tx;
 }
 
-//Cancelling Transaction (Rollback all seats)
-async function CancelTransactionService(txId: number) {
-  const t = await prisma.transaction.findUnique({ where: { id: txId } });
-  if (!t) throw new Error("Not found");
-  await prisma.$transaction(async (tx) => {
-    // restore seats
-    await tx.event.update({
-      where: { id: t.event_id },
-      data: { remaining_seats: { increment: t.quantity } },
-    });
-    // return coupon
-    if (t.coupon_id) {
-      await tx.coupon.update({
-        where: { id: t.coupon_id },
-        data: { use_count: { decrement: 1 } },
-      });
-    }
-    // return voucher
-    if (t.voucher_id) {
-      await tx.voucher.update({
-        where: { id: t.voucher_id },
-        data: { usage_amount: { decrement: 1 } },
-      });
-    }
-    // return points
-    if (t.points_id) {
-      await tx.points.update({
-        where: { id: t.points_id },
-        data: { is_used: false },
-      });
-    }
-    // mark canceled
-    await tx.transaction.update({
-      where: { id: txId },
-      data: { status: transaction_status.canceled },
-    });
-  });
-}
-
 //Customer upload Payment Proof, and then change the status to "waiting_for_admin_confirmation"
 async function PaymentTransactionService({
   transactionId,
@@ -228,18 +189,13 @@ async function PaymentTransactionService({
     }
 
     // 5. Upload to Cloudinary
-    // const { secure_url } = await cloudinaryUpload(file);
-    // const url = secure_url;
-    // const splitUrl = secure_url.split("/");
-    // const fileName = splitUrl[splitUrl.length - 1];
+    const { secure_url } = await cloudinaryUpload(file);
+    url = secure_url;
+    const splitUrl = secure_url.split("/");
+    const fileName = splitUrl[splitUrl.length - 1];
 
-    // 5. Wrap database update inside $transaction
+    // 6. Wrap database update inside $transaction
     const updatedTx = await prisma.$transaction(async (txClient) => {
-      // 6. Upload to Cloudinary
-      const { secure_url } = await cloudinaryUpload(file);
-      const url = secure_url;
-      const splitUrl = secure_url.split("/");
-      const fileName = splitUrl[splitUrl.length - 1];
       // Update transaction with payment proof and status inside the transaction
       const updatedTransaction = await txClient.transaction.update({
         where: { id: transactionId },
@@ -255,7 +211,7 @@ async function PaymentTransactionService({
 
     return updatedTx;
   } catch (err) {
-    await cloudinaryRemove(url);
+    if (url) await cloudinaryRemove(url);
     throw err;
   }
 }
@@ -315,9 +271,86 @@ async function EOActionTransactionService(param: IEOActionTransactionParam) {
   }
 }
 
+// Expire Transactions that have not received payment proof within 2 hours
+async function AutoExpireTransactionService() {
+  try {
+    console.log("function auto expire berjalan");
+    await prisma.transaction.updateMany({
+      where: {
+        status: transaction_status.waiting_for_payment,
+        expires_at: { lt: new Date() },
+      },
+      data: {
+        status: transaction_status.expired,
+      },
+    });
+  } catch (err) {
+    throw err;
+  }
+}
+
+async function AutoCancelTransactionService() {
+  try {
+    const now = new Date();
+    const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
+
+    // 1. Find all transactions still pending admin confirmation for 3+ days
+    const staleTransactions = await prisma.transaction.findMany({
+      where: {
+        status: transaction_status.waiting_for_admin_confirmation,
+        updated_at: { lt: threeDaysAgo },
+      },
+    });
+
+    // Rollback all transactions
+    for (const tx of staleTransactions) {
+      await prisma.$transaction(async (txClient) => {
+        // a) Restore seats
+        await txClient.event.update({
+          where: { id: tx.event_id },
+          data: { remaining_seats: { increment: tx.quantity } },
+        });
+
+        // b) Refund coupon usage
+        if (tx.coupon_id) {
+          await txClient.coupon.update({
+            where: { id: tx.coupon_id },
+            data: { use_count: { decrement: 1 } },
+          });
+        }
+
+        // c) Refund voucher usage
+        if (tx.voucher_id) {
+          await txClient.voucher.update({
+            where: { id: tx.voucher_id },
+            data: { usage_amount: { decrement: 1 } },
+          });
+        }
+
+        // d) Mark points unused
+        if (tx.points_id) {
+          await txClient.points.update({
+            where: { id: tx.points_id },
+            data: { is_used: false },
+          });
+        }
+
+        // e) Finally cancel the transaction
+        await txClient.transaction.update({
+          where: { id: tx.id },
+          data: { status: transaction_status.canceled, updated_at: new Date() },
+        });
+      });
+    }
+  } catch (err) {
+    throw err;
+  }
+}
+
 export {
   CreateTransactionService,
-  CancelTransactionService,
   PaymentTransactionService,
   EOActionTransactionService,
+  AutoExpireTransactionService,
+  AutoCancelTransactionService,
 };

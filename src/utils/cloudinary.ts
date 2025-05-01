@@ -9,7 +9,9 @@ cloudinary.config({
   cloud_name: CLOUDINARY_NAME || "",
 });
 
-export function cloudinaryUpload(file: Express.Multer.File) {
+export function cloudinaryUpload(
+  file: Express.Multer.File
+): Promise<UploadApiResponse> {
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
       (err, res: UploadApiResponse) => {
@@ -21,4 +23,25 @@ export function cloudinaryUpload(file: Express.Multer.File) {
 
     streamifier.createReadStream(file.buffer).pipe(uploadStream);
   });
+}
+
+export function extractPublicIdFromUrl(url: string) {
+  try {
+    const urlParts = url.split("/");
+    const publicId = urlParts[urlParts.length - 1].split(".")[0];
+
+    return publicId;
+  } catch (err) {
+    throw err;
+  }
+}
+
+export async function cloudinaryRemove(secure_url: string) {
+  try {
+    const publicId = extractPublicIdFromUrl(secure_url);
+
+    return await cloudinary.uploader.destroy(publicId);
+  } catch (err) {
+    throw err;
+  }
 }

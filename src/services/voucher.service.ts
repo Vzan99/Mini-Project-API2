@@ -57,7 +57,7 @@ async function CreateVoucherService(param: ICreateVoucher) {
         voucher_start_date: voucherStartDate,
         voucher_end_date: voucherEndDate,
         max_usage: maxUsage,
-        usage_amount: maxUsage,
+        usage_amount: 0,
       },
     });
 

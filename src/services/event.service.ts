@@ -24,6 +24,7 @@ async function FindDuplicateEvent(
   }
 }
 
+//Create Event
 async function CreateEventService(param: ICreateEventParam) {
   try {
     const {
@@ -77,5 +78,7 @@ async function CreateEventService(param: ICreateEventParam) {
     throw err;
   }
 }
+
+//Update Event Image
 
 export { CreateEventService };

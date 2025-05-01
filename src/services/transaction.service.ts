@@ -1,10 +1,13 @@
-// src/services/TransactionService.ts
+import prisma from "../lib/prisma";
+import { transaction_status } from "@prisma/client";
+import {
+  ICreateTransactionParam,
+  IPaymentTransactionParam,
+  IEOActionTransactionParam,
+} from "../interfaces/transaction.interface";
+import { cloudinaryRemove, cloudinaryUpload } from "../utils/cloudinary";
 
-import { PrismaClient, transaction_status } from "@prisma/client";
-import { ICreateTransactionParam } from "../interfaces/transaction.interface";
-
-const prisma = new PrismaClient();
-
+//Create Transaction (Click "BuyTicket" Button from event details page)
 async function CreateTransactionService(param: ICreateTransactionParam) {
   const { userId, eventId, quantity, couponId, voucherId, pointsId } = param;
 
@@ -148,7 +151,7 @@ async function CreateTransactionService(param: ICreateTransactionParam) {
   return tx;
 }
 
-//Cancelling Transaction
+//Cancelling Transaction (Rollback all seats)
 async function CancelTransactionService(txId: number) {
   const t = await prisma.transaction.findUnique({ where: { id: txId } });
   if (!t) throw new Error("Not found");
@@ -187,49 +190,134 @@ async function CancelTransactionService(txId: number) {
   });
 }
 
-//Confirm Transaction
-async function ConfirmTransactionService(
-  transactionId: number,
-  paymentProofUrl: string
-) {
-  // 1. Fetch the transaction
-  const tx = await prisma.transaction.findUnique({
-    where: { id: transactionId },
-  });
-  if (!tx) {
-    throw new Error("Transaction not found");
-  }
-
-  // 2. Must be waiting_for_payment
-  if (tx.status !== transaction_status.waiting_for_payment) {
-    throw new Error("Transaction not awaiting payment");
-  }
-
-  // 3. Must not be expired
-  if (tx.expires_at < new Date()) {
-    // Optionally auto-expire here or let your cron job handle it
-    await prisma.transaction.update({
+//Customer upload Payment Proof, and then change the status to "waiting_for_admin_confirmation"
+async function PaymentTransactionService({
+  transactionId,
+  userId,
+  file,
+}: IPaymentTransactionParam) {
+  let url = "";
+  try {
+    // 1. Get the transaction
+    const tx = await prisma.transaction.findUnique({
       where: { id: transactionId },
-      data: { status: transaction_status.expired },
     });
-    throw new Error("Transaction has already expired");
+
+    if (!tx) {
+      throw new Error("Transaction not found");
+    }
+
+    // 2. Check ownership
+    if (tx.user_id !== userId) {
+      throw new Error("You are not authorized to confirm this transaction");
+    }
+
+    // 3. Must be in the correct status
+    if (tx.status !== transaction_status.waiting_for_payment) {
+      throw new Error("Transaction is not awaiting payment");
+    }
+
+    // 4. Check if expired
+    if (tx.expires_at && tx.expires_at < new Date()) {
+      await prisma.transaction.update({
+        where: { id: transactionId },
+        data: { status: transaction_status.expired },
+      });
+
+      throw new Error("Transaction has expired");
+    }
+
+    // 5. Upload to Cloudinary
+    // const { secure_url } = await cloudinaryUpload(file);
+    // const url = secure_url;
+    // const splitUrl = secure_url.split("/");
+    // const fileName = splitUrl[splitUrl.length - 1];
+
+    // 5. Wrap database update inside $transaction
+    const updatedTx = await prisma.$transaction(async (txClient) => {
+      // 6. Upload to Cloudinary
+      const { secure_url } = await cloudinaryUpload(file);
+      const url = secure_url;
+      const splitUrl = secure_url.split("/");
+      const fileName = splitUrl[splitUrl.length - 1];
+      // Update transaction with payment proof and status inside the transaction
+      const updatedTransaction = await txClient.transaction.update({
+        where: { id: transactionId },
+        data: {
+          payment_proof: fileName, // Save the secure URL in the database
+          status: transaction_status.waiting_for_admin_confirmation,
+          updated_at: new Date(),
+        },
+      });
+
+      return updatedTransaction;
+    });
+
+    return updatedTx;
+  } catch (err) {
+    await cloudinaryRemove(url);
+    throw err;
   }
+}
 
-  // 4. Update with payment proof and new status
-  const updated = await prisma.transaction.update({
-    where: { id: transactionId },
-    data: {
-      payment_proof: paymentProofUrl,
-      status: transaction_status.waiting_for_admin_confirmation,
-      updated_at: new Date(),
-    },
-  });
+//Event Organizer Action Confirm or Reject
+async function EOActionTransactionService(param: IEOActionTransactionParam) {
+  try {
+    const { transactionId, eoId, action } = param;
 
-  return updated;
+    // Fetch the transaction along with its event to ensure the EO is authorized to act
+    const transaction = await prisma.transaction.findUnique({
+      where: { id: transactionId },
+      include: { event: true },
+    });
+
+    if (!transaction) throw new Error("Transaction not found");
+
+    const event = transaction.event;
+
+    // Ensure the transaction belongs to the correct event organizer
+    if (event.organizer_id !== eoId) {
+      throw new Error("You are not authorized to modify this transaction");
+    }
+
+    // Check the current status of the transaction
+    if (
+      transaction.status !== transaction_status.waiting_for_admin_confirmation
+    ) {
+      throw new Error(
+        "Transaction status is not waiting for admin confirmation"
+      );
+    }
+
+    // Use the action from the enum directly
+    let updatedStatus: transaction_status;
+    if (
+      action === transaction_status.confirmed ||
+      action === transaction_status.rejected
+    ) {
+      updatedStatus = action; // Directly using the action from the enum
+    } else {
+      throw new Error("Invalid action");
+    }
+
+    // Update the transaction status
+    const updatedTransaction = await prisma.transaction.update({
+      where: { id: transactionId },
+      data: {
+        status: updatedStatus,
+        updated_at: new Date(),
+      },
+    });
+
+    return updatedTransaction;
+  } catch (err) {
+    throw err;
+  }
 }
 
 export {
   CreateTransactionService,
   CancelTransactionService,
-  ConfirmTransactionService,
+  PaymentTransactionService,
+  EOActionTransactionService,
 };

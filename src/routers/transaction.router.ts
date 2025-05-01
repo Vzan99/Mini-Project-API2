@@ -1,21 +1,23 @@
 import { Router } from "express";
-import { CreateTransactionController } from "../controllers/transaction.controller";
-
+import {
+  CreateTransactionController,
+  PaymentTransactionController,
+  EOActionTransactionController,
+} from "../controllers/transaction.controller";
+import { Multer } from "../utils/multer";
 const router = Router();
 
-// configure multer
-// const upload = multer({
-//     dest: "uploads/",        // adjust as needed
-//     limits: { fileSize: 5e6 } // max 5MB
-//   });
+//Customer Payment (Upload Payment Proof)
+router.post(
+  "/:id/payment",
+  Multer().single("payment_proof"), // memory upload
+  PaymentTransactionController
+);
 
-// // POST /transactions/:id/confirm
-// router.post(
-//     "/:id/confirm",
-//     upload.single("paymentProof"), // expects form field named "paymentProof"
-//     ConfirmTransactionController
-//   );
+//EO Action
+router.post("/:transactionId/action", EOActionTransactionController);
 
+//Customer make a transaction
 router.post("/", CreateTransactionController);
 
 export default router;

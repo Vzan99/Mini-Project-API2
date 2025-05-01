@@ -11,3 +11,9 @@ export interface ICreateEventParam {
   totalSeats: number;
   category: category;
 }
+
+//hanya untuk exercise upload foto
+export interface IUpdateEventImage {
+  file: Express.Multer.File;
+  // eventId: int;
+}

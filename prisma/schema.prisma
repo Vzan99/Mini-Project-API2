@@ -131,10 +131,12 @@ model Review {
 
 model User {
   id Int @id @default(autoincrement())
+  first_name String @default("")
+  last_name String @default("")
   username String @unique
   email String @unique
   password String
-  user_referral_code String @unique
+  user_referral_code String? @unique
   profile_picture String?
   referer_id Int?
   created_at DateTime @default(now())
@@ -143,7 +145,7 @@ model User {
 // reset_expires_at DateTime?
 
   //Relations
-  role role
+  role role @default(customer)
   referralsMade   Referral[]  @relation(name: "UserReferrer")
   referralsReceived Referral[] @relation(name: "UserReferred")
   transactions Transaction[]
@@ -167,3 +169,4 @@ model Referral {
   user_referrer User @relation(name: "UserReferrer", fields: [user_id_referer], references: [id])
   user_referred User @relation(name: "UserReferred", fields: [user_id_referred], references: [id])
 }
+

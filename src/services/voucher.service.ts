@@ -12,7 +12,7 @@ async function CreateVoucherService(param: ICreateVoucher) {
       maxUsage,
     } = param;
 
-    //Validation
+    // Validation
     if (!voucherCode || voucherCode.trim() === "") {
       throw new Error("Voucher code is required.");
     }
@@ -29,6 +29,12 @@ async function CreateVoucherService(param: ICreateVoucher) {
       throw new Error("Voucher end date must be after start date.");
     }
 
+    // Ensure voucher start date is not in the past
+    if (new Date(voucherStartDate).getTime() < Date.now() - 1000) {
+      throw new Error("Voucher start date cannot be in the past.");
+    }
+
+    // Check if the voucher code already exists for the event
     const isExist = await prisma.voucher.findFirst({
       where: {
         event_id: eventId,
@@ -40,6 +46,7 @@ async function CreateVoucherService(param: ICreateVoucher) {
       throw new Error("Voucher code already exists.");
     }
 
+    // Fetch the event to ensure it exists
     const event = await prisma.event.findUnique({
       where: { id: eventId },
     });
@@ -48,7 +55,12 @@ async function CreateVoucherService(param: ICreateVoucher) {
       throw new Error("Event not found.");
     }
 
-    //Create Voucher
+    // Check if the voucher is already expired
+    if (new Date() > voucherEndDate) {
+      throw new Error("Voucher has expired.");
+    }
+
+    // Create the voucher
     const voucher = await prisma.voucher.create({
       data: {
         event_id: eventId,
@@ -57,7 +69,7 @@ async function CreateVoucherService(param: ICreateVoucher) {
         voucher_start_date: voucherStartDate,
         voucher_end_date: voucherEndDate,
         max_usage: maxUsage,
-        usage_amount: 0,
+        usage_amount: 0, // Initially no usage
       },
     });
 
@@ -68,5 +80,3 @@ async function CreateVoucherService(param: ICreateVoucher) {
 }
 
 export { CreateVoucherService };
-
-//tambah validasi untuk voucher tidak bisa dibuat jika tanggal event sudah selesai

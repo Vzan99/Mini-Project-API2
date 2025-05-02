@@ -1,15 +1,5 @@
-// src/validations/event.validation.ts
-
 import { z } from "zod";
-
-// Mirror your Prisma “category” enum
-export const categoryEnum = z.enum([
-  "Concert",
-  "Festival",
-  "Comedy",
-  "Museum",
-  "Others",
-]);
+import { category } from "@prisma/client";
 
 export const createEventSchema = z
   .object({
@@ -47,7 +37,7 @@ export const createEventSchema = z
       .int("Total seats must be an integer")
       .min(1, "At least one seat is required"),
 
-    category: categoryEnum,
+    category: z.nativeEnum(category),
   })
   .refine((data) => data.endDate > data.startDate, {
     message: "End date must come after start date",

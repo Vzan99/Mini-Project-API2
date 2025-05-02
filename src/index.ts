@@ -6,6 +6,7 @@ import EventRouter from "./routers/event.router";
 import VoucherRouter from "./routers/voucher.router";
 import TransactionRouter from "./routers/transaction.router";
 import ReviewRouter from "./routers/review.router";
+import AdminRouter from "./routers/admin.router";
 
 import { AutoExpireTransactionTask } from "./utils/cron/expire-transaction-task";
 import { AutoCancelTransactionTask } from "./utils/cron/cancel-transaction-task";
@@ -37,6 +38,9 @@ app.use("/transactions", TransactionRouter);
 
 //Reviews
 app.use("/reviews", ReviewRouter);
+
+//Admin (multiuse for get, filter, etc)
+app.use("/admin", AdminRouter);
 
 //Port
 app.listen(port, () => {

@@ -1,0 +1,146 @@
+import { ILoginParam, IRegisterParam } from "../interfaces/user.interface";
+import prisma from "../lib/prisma";
+import { genSaltSync, hash, compare } from "bcrypt";
+import { sign } from "jsonwebtoken";
+
+import { SECRET_KEY } from "../config";
+import { randomBytes } from "crypto";
+import { generateUniqueReferralCode } from "../utils/refferalcode";
+
+async function findUserByEmail(email: string) {
+  try {
+    const user = await prisma.user.findFirst({
+      select: {
+        email: true,
+        first_name: true,
+        last_name: true,
+        password: true,
+        role: true,
+      },
+      where: {
+        email,
+      },
+    });
+    return user;
+  } catch (err) {
+    throw err;
+  }
+}
+
+async function findUserByUsername(username: string) {
+  try {
+    const user = await prisma.user.findFirst({
+      where: {
+        username,
+      },
+    });
+    return user;
+  } catch (err) {
+    throw err;
+  }
+}
+
+async function RegisterService(param: IRegisterParam) {
+  try {
+    //checking if the email is already exists
+    const isEmailExist = await findUserByEmail(param.email);
+
+    //if the email is already exists, throw an error
+    if (isEmailExist) {
+      throw new Error("Email already exists.");
+    }
+
+    //check if the username is already taken
+    const isUsernameExist = await findUserByUsername(param.username);
+
+    //if the username is already taken, throw an error
+    if (isUsernameExist) {
+      throw new Error("Username already taken.");
+    }
+
+    //find referrer if referral code is provided
+    let refererId: number | null = null;
+    if (param.referral_code) {
+      const referrer = await prisma.user.findFirst({
+        where: { user_referral_code: param.referral_code },
+        select: { id: true },
+      });
+
+      if (!referrer) {
+        throw new Error("Invalid referral code.");
+      }
+
+      refererId = referrer.id;
+    }
+
+    const userReferralCode = await generateUniqueReferralCode();
+
+    const user = await prisma.$transaction(async (tx) => {
+      const salt = genSaltSync(10);
+      const hashedPassword = await hash(param.password, salt);
+
+      //create new user
+      const newUser = await tx.user.create({
+        data: {
+          first_name: param.first_name,
+          last_name: param.last_name,
+          email: param.email,
+          password: hashedPassword,
+          username: param.username,
+          user_referral_code: userReferralCode,
+          referer_id: refererId,
+          role: param.role || "customer",
+        },
+      });
+
+      // handle referral rewards if refferal code was used by newUser
+      if (refererId) {
+        // 1. Create referral record
+        await tx.referral.create({
+          data: {
+            user_id_referer: refererId,
+            user_id_referred: newUser.id,
+            points_reward: 10000, // 10,000 points as per requirements
+          },
+        });
+
+        // 2. Award points to referrer (valid for 3 months)
+        const pointsExpiryDate = new Date();
+        pointsExpiryDate.setMonth(pointsExpiryDate.getMonth() + 3);
+
+        await tx.points.create({
+          data: {
+            user_id: refererId,
+            points_amount: 10000,
+            credited_at: new Date(),
+            expires_at: pointsExpiryDate,
+            is_used: false,
+            is_expired: false,
+          },
+        });
+
+        // 3. Create discount coupon for new user (valid for 3 months)
+        const couponExpiryDate = new Date();
+        couponExpiryDate.setMonth(couponExpiryDate.getMonth() + 3);
+
+        await tx.coupon.create({
+          data: {
+            user_id: newUser.id,
+            coupon_code: `REF${userReferralCode}`,
+            discount_amount: 50000, // Example: 50,000 IDR discount
+            coupon_start_date: new Date(),
+            coupon_end_date: couponExpiryDate,
+            max_usage: 2, // One-time use
+            use_count: 0,
+          },
+        });
+      }
+      return newUser;
+    });
+    return user;
+  } catch (err) {
+    throw err;
+  }
+}
+
+export { RegisterService };

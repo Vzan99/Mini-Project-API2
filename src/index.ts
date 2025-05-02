@@ -6,8 +6,9 @@ import EventRouter from "./routers/event.router";
 import VoucherRouter from "./routers/voucher.router";
 import TransactionRouter from "./routers/transaction.router";
 import ReviewRouter from "./routers/review.router";
+import AuthRouter from "./routers/auth.router";
+import Test from "./routers/testdata.router";
 import AdminRouter from "./routers/admin.router";
-
 import { AutoExpireTransactionTask } from "./utils/cron/expire-transaction-task";
 import { AutoCancelTransactionTask } from "./utils/cron/cancel-transaction-task";
 
@@ -38,6 +39,12 @@ app.use("/transactions", TransactionRouter);
 
 //Reviews
 app.use("/reviews", ReviewRouter);
+
+//Authentication
+app.use("/auth", AuthRouter);
+
+//test database
+app.use("/testdata", Test);
 
 //Admin (multiuse for get, filter, etc)
 app.use("/admin", AdminRouter);

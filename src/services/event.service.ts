@@ -14,11 +14,6 @@ async function CreateEventService(param: ICreateEventParam) {
       fileName = splitUrl[splitUrl.length - 1];
     }
 
-    // if (param.file) {
-    //   const upload = await cloudinaryUpload(param.file);
-    //   imageUrl = upload.secure_url;
-    // }
-
     // 2) Duplicate-check
     const dup = await prisma.event.findFirst({
       where: {

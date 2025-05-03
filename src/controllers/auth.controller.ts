@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 
-import { RegisterService } from "../services/auth.service";
+import { LoginService, RegisterService } from "../services/auth.service";
 
 async function RegisterController(
   req: Request,
@@ -24,7 +24,7 @@ async function LoginController(
   next: NextFunction
 ) {
   try {
-    const data = await RegisterService(req.body);
+    const data = await LoginService(req.body);
     res.status(201).send({
       message: "Register Success!",
       user: data,

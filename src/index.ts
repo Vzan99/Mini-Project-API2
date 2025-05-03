@@ -1,6 +1,7 @@
 import express, { Application } from "express";
 import { Request, Response, NextFunction } from "express";
 import { PORT } from "./config";
+import cors from "cors";
 
 import EventRouter from "./routers/event.router";
 import VoucherRouter from "./routers/voucher.router";
@@ -9,6 +10,7 @@ import ReviewRouter from "./routers/review.router";
 import AuthRouter from "./routers/auth.router";
 import Test from "./routers/testdata.router";
 import AdminRouter from "./routers/admin.router";
+
 import { AutoExpireTransactionTask } from "./utils/cron/expire-transaction-task";
 import { AutoCancelTransactionTask } from "./utils/cron/cancel-transaction-task";
 
@@ -17,6 +19,13 @@ const app: Application = express();
 
 //Middleware
 app.use(express.json());
+app.use(cors());
+
+app.use(
+  cors({
+    origin: "http://localhost:3000", // Your frontend URL
+  })
+);
 
 //Test Connection
 app.get("/ping", (req: Request, res: Response) => {

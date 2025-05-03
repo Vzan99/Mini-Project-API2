@@ -6,14 +6,14 @@ import {
 } from "../controllers/admin.controller";
 import { eventFilterSchema } from "../schemas/filterEvent.schema";
 
-import QueryValidator from "../middlewares/queryvalidator.middleware";
+import QueryValidator from "../middlewares/queryValidator.middleware";
 
 const router = Router();
 
 // Get Organizers data
 router.get("/organizers/:id", GetOrganizerProfileController);
 
-// Filter all events by category, location, date, and price
+// Filter all events by category, location, date, and price using query
 router.get(
   "/filter", // Endpoint for filtering events
   QueryValidator(eventFilterSchema), // Validate query parameters

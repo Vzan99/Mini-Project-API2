@@ -3,7 +3,7 @@ import {
   RegisterController,
   LoginController,
 } from "../controllers/auth.controller";
-import ReqValidator from "../middlewares/validator.middleware";
+import ReqValidator from "../middlewares/reqValidator.middleware";
 import { registerSchema, loginSchema } from "../schemas/user.schema";
 
 const router = Router();

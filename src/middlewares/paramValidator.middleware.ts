@@ -1,0 +1,22 @@
+import { Request, Response, NextFunction } from "express";
+import { ZodTypeAny, ZodError } from "zod";
+
+export default function ParamValidator(schema: ZodTypeAny) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const parsed = schema.parse(req.params);
+      (req as any).validatedParams = parsed;
+      next();
+    } catch (err) {
+      if (err instanceof ZodError) {
+        const details = err.errors.map((e) => ({
+          path: e.path,
+          message: e.message,
+        }));
+        res.status(400).json({ message: "Validation failed", details });
+      } else {
+        next(err);
+      }
+    }
+  };
+}

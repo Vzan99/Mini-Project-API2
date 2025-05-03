@@ -1,6 +1,7 @@
 import prisma from "../lib/prisma";
 import { ICreateEventParam } from "../interfaces/event.interface";
 import { cloudinaryUpload, cloudinaryRemove } from "../utils/cloudinary";
+import { UUID } from "crypto";
 
 async function CreateEventService(param: ICreateEventParam) {
   let imageUrl: string | null = null;
@@ -63,4 +64,26 @@ async function CreateEventService(param: ICreateEventParam) {
   }
 }
 
-export { CreateEventService };
+async function GetEventByIdService(id: string) {
+  try {
+    const event = await prisma.event.findUnique({
+      where: { id },
+      include: {
+        organizer: true, // Include the organizer's information if necessary
+        transactions: true, // You can include related data like transactions if needed
+        voucher: true,
+        review: true,
+      },
+    });
+
+    if (!event) {
+      throw new Error("Event not found");
+    }
+
+    return event;
+  } catch (err) {
+    throw err;
+  }
+}
+
+export { CreateEventService, GetEventByIdService };

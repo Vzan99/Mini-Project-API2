@@ -12,12 +12,14 @@ import {
   EOActionSchema,
   PaymentParamSchema,
 } from "../schemas/transaction.schema"; // Import schemas
+import { TokenVerification } from "../middlewares/auth.middleware";
 
 const router = Router();
 
 // Customer makes a transaction (body validated)
 router.post(
   "/",
+  TokenVerification,
   ReqValidator(CreateTransactionSchema), // Validate body using schema
   CreateTransactionController
 );
@@ -25,6 +27,7 @@ router.post(
 // EO Action (param and body validated)
 router.post(
   "/:transactionId/action",
+  TokenVerification,
   ParamValidator(EOActionSchema.pick({ transactionId: true })), // Validate transactionId param
   ReqValidator(EOActionSchema.pick({ action: true })), // Validate action in body
   EOActionTransactionController
@@ -33,6 +36,7 @@ router.post(
 // Customer uploads payment proof (param validated, file upload after)
 router.post(
   "/:id/payment",
+  TokenVerification,
   ParamValidator(PaymentParamSchema), // Validate id param
   Multer().single("payment_proof"), // Handle file upload
   PaymentTransactionController

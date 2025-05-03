@@ -3,6 +3,7 @@ import { verify } from "jsonwebtoken";
 import { SECRET_KEY } from "../config";
 
 import { IJwtPayloadParam } from "../interfaces/user.interface";
+import { IUserReqParam } from "../types/express";
 
 async function TokenVerification(
   req: Request,
@@ -16,11 +17,12 @@ async function TokenVerification(
 
     const userVerification = verify(token, String(SECRET_KEY));
 
-    req.user = userVerification as IJwtPayloadParam;
+    req.user = userVerification as IUserReqParam;
 
     next();
   } catch (err) {
-    return res.status(401).json({ message: "Invalid or expired token" });
+    // return res.status(401).json({ message: "Invalid or expired token" });
+    next(err);
   }
 }
 

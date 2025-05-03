@@ -67,24 +67,16 @@ async function EOActionTransactionController(
   next: NextFunction
 ) {
   try {
-    const { transactionId } = req.params; // Extract transactionId from the URL params
-    const { action } = req.body; // Get the action from the request body
-    const eoId = String(req.body.eoId); // Get the userId from the request body
+    const { transactionId } = req.params;
+    const { action } = req.body;
 
-    // Validate if transactionId or action is missing
-    if (!transactionId || !action) {
-      return next(new Error("Transaction ID and action are required"));
-    }
+    // Get the user ID from the authenticated user
+    const userId = req.user.id;
 
-    // Validate if userId is provided
-    if (!eoId) {
-      return next(new Error("Unauthorized: User ID missing"));
-    }
-
-    // Call the service to perform the action (confirm/reject) on the transaction
+    // Call the service with the correct parameter name
     const updatedTransaction = await EOActionTransactionService({
       transactionId: String(transactionId),
-      eoId,
+      userId, // This should match the parameter name in your service
       action,
     });
 

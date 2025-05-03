@@ -17,6 +17,6 @@ export interface IPaymentTransactionParam {
 
 export interface IEOActionTransactionParam {
   transactionId: string;
-  eoId: string;
+  userId: string;
   action: transaction_status;
 }

@@ -2,19 +2,16 @@ import { z } from "zod";
 
 export const CreateTransactionSchema = z.object({
   userId: z.string().uuid(),
-  eventId: z.string().uuid(),
+  eventId: z.string(),
   quantity: z.number().int().positive(),
-  status: z.enum(["pending", "confirmed"]),
-  unitPrice: z.number().nonnegative(),
   voucherId: z.string().uuid().optional(),
   pointsId: z.string().uuid().optional(),
   couponId: z.string().uuid().optional(),
-  ticketCode: z.string().optional(),
 });
 
 export const EOActionSchema = z.object({
   transactionId: z.string().uuid(),
-  action: z.enum(["approve", "reject"]),
+  action: z.enum(["confirmed", "rejected"]),
 });
 
 export const PaymentParamSchema = z.object({

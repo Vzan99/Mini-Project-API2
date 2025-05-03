@@ -219,7 +219,7 @@ async function PaymentTransactionService({
 //Event Organizer Action Confirm or Reject
 async function EOActionTransactionService(param: IEOActionTransactionParam) {
   try {
-    const { transactionId, eoId, action } = param;
+    const { transactionId, userId, action } = param;
 
     // Fetch the transaction along with its event to ensure the EO is authorized to act
     const transaction = await prisma.transaction.findUnique({
@@ -232,7 +232,7 @@ async function EOActionTransactionService(param: IEOActionTransactionParam) {
     const event = transaction.event;
 
     // Ensure the transaction belongs to the correct event organizer
-    if (event.organizer_id !== eoId) {
+    if (event.organizer_id !== userId) {
       throw new Error("You are not authorized to modify this transaction");
     }
 

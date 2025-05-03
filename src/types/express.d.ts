@@ -12,7 +12,7 @@ export interface IUserReqParam {
 declare global {
   namespace Express {
     interface Request {
-      user?: IJwtPayload; // Tambahkan properti user ke dalam Request
+      user?: IJwtPayloadParam; // Tambahkan properti user ke dalam Request
     }
   }
 }

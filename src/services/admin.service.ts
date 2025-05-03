@@ -2,7 +2,7 @@ import prisma from "../lib/prisma";
 import { FilterParams } from "../interfaces/filter.interface";
 import { category } from "@prisma/client";
 
-async function GetOrganizerProfileService(organizerId: number) {
+async function GetOrganizerProfileService(organizerId: string) {
   try {
     // Ensure the user is actually an event_organizer
     const user = await prisma.user.findUnique({

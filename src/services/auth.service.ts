@@ -1,16 +1,25 @@
-import { ILoginParam, IRegisterParam } from "../interfaces/user.interface";
+import {
+  ILoginParam,
+  IRegisterParam,
+  IJwtPayloadParam,
+} from "../interfaces/user.interface";
 import prisma from "../lib/prisma";
 import { genSaltSync, hash, compare } from "bcrypt";
 import { sign } from "jsonwebtoken";
 
 import { SECRET_KEY } from "../config";
 import { randomBytes } from "crypto";
-import { generateUniqueReferralCode } from "../utils/refferalcode";
+import {
+  generateUniqueReferralCode,
+  findUserByReferralCode,
+} from "../utils/refferalcode";
 
 async function findUserByEmail(email: string) {
   try {
+    // find user by email using prisma and show only email, first_name, last_name, password, and role
     const user = await prisma.user.findFirst({
       select: {
+        id: true,
         email: true,
         first_name: true,
         last_name: true,
@@ -29,6 +38,7 @@ async function findUserByEmail(email: string) {
 
 async function findUserByUsername(username: string) {
   try {
+    // find user by username
     const user = await prisma.user.findFirst({
       where: {
         username,
@@ -59,12 +69,10 @@ async function RegisterService(param: IRegisterParam) {
     }
 
     //find referrer if referral code is provided
-    let refererId: number | null = null;
+    let refererId: string | null = null;
     if (param.referral_code) {
-      const referrer = await prisma.user.findFirst({
-        where: { user_referral_code: param.referral_code },
-        select: { id: true },
-      });
+      // Gunakan fungsi baru yang case insensitive
+      const referrer = await findUserByReferralCode(param.referral_code);
 
       if (!referrer) {
         throw new Error("Invalid referral code.");
@@ -82,6 +90,7 @@ async function RegisterService(param: IRegisterParam) {
       //create new user
       const newUser = await tx.user.create({
         data: {
+          id: param.id,
           first_name: param.first_name,
           last_name: param.last_name,
           email: param.email,
@@ -126,11 +135,11 @@ async function RegisterService(param: IRegisterParam) {
         await tx.coupon.create({
           data: {
             user_id: newUser.id,
-            coupon_code: `REF${userReferralCode}`,
-            discount_amount: 50000, // Example: 50,000 IDR discount
+            coupon_code: `COUP${userReferralCode}`,
+            discount_amount: 100000, // Example: 50,000 IDR discount
             coupon_start_date: new Date(),
             coupon_end_date: couponExpiryDate,
-            max_usage: 2, // One-time use
+            max_usage: 1, // One-time use
             use_count: 0,
           },
         });
@@ -143,4 +152,39 @@ async function RegisterService(param: IRegisterParam) {
   }
 }
 
-export { RegisterService };
+async function LoginService(param: ILoginParam) {
+  try {
+    //find user by email
+    const user = await findUserByEmail(param.email);
+
+    //if user not found, throw an error
+    if (!user) throw new Error("User not found");
+
+    //compare password with hashed password
+    const isPasswordValid = await compare(param.password, user.password);
+
+    // if password is invalid, throw an error
+    if (!isPasswordValid) {
+      throw new Error("Invalid password");
+    }
+
+    //generate token
+    const payload: IJwtPayloadParam = {
+      id: user.id,
+      email: user.email,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      role: user.role,
+    };
+
+    //generate token
+    const token = sign(payload, String(SECRET_KEY), { expiresIn: "1h" });
+
+    //return token and user
+    return { token, user: payload };
+  } catch (err) {
+    throw err;
+  }
+}
+
+export { RegisterService, LoginService };

@@ -1,5 +1,5 @@
 export interface ICreateVoucher {
-  eventId: number;
+  eventId: string;
   voucherCode: string;
   discountAmount: number;
   voucherStartDate: Date;

@@ -18,4 +18,20 @@ async function RegisterController(
   }
 }
 
-export { RegisterController };
+async function LoginController(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const data = await RegisterService(req.body);
+    res.status(201).send({
+      message: "Register Success!",
+      user: data,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export { RegisterController, LoginController };

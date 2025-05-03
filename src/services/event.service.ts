@@ -54,7 +54,7 @@ async function CreateEventService(param: ICreateEventParam) {
         total_seats: param.totalSeats,
         remaining_seats: param.totalSeats,
         category: param.category,
-        organizer_id: 2, // TODO: replace with authenticated user ID
+        organizer_id: param.organizerId, // ID dari user yang terautentikasi
       },
     });
 

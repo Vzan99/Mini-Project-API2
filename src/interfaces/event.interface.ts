@@ -10,6 +10,7 @@ export interface ICreateEventParam {
   price: number;
   totalSeats: number;
   category: category;
+  organizerId: string;
 }
 
 //hanya untuk exercise upload foto

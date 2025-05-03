@@ -16,7 +16,7 @@ datasource db {
 }
             
 model Event {
-  id Int @id @default(autoincrement())
+  id String @id @default(uuid())
   name String
   start_date DateTime
   end_date DateTime
@@ -27,7 +27,7 @@ model Event {
   total_seats Int
   remaining_seats Int 
   created_at DateTime @default(now())
-  organizer_id Int
+  organizer_id String
   //relations
   organizer User @relation(fields:[organizer_id], references:[id])
   category category
@@ -48,8 +48,8 @@ enum category {
 }
 
 model Voucher {
-  id Int @id @default(autoincrement())
-  event_id Int
+  id String @id @default(uuid())
+  event_id String
   voucher_code String @unique
   discount_amount Int
   voucher_start_date DateTime
@@ -61,8 +61,8 @@ model Voucher {
 }
 
 model Points {
-  id Int @id @default(autoincrement())
-  user_id Int
+  id String @id @default(uuid())
+  user_id String
   points_amount Int
   credited_at DateTime
   expires_at DateTime
@@ -73,8 +73,8 @@ model Points {
 }
 
 model Coupon {
-  id Int @id @default(autoincrement())
-  user_id Int
+  id String @id @default(uuid())
+  user_id String
   coupon_code String @unique
   discount_amount Int
   coupon_start_date DateTime
@@ -86,12 +86,12 @@ model Coupon {
 }
 
 model Transaction {
-  id Int @id @default(autoincrement())
-  user_id Int
-  coupon_id Int?
-  voucher_id Int?
-  points_id Int?
-  event_id Int
+  id String @id @default(uuid())
+  user_id String
+  coupon_id String?
+  voucher_id String?
+  points_id String?
+  event_id String
   total_pay_amount Int
   payment_proof String?
   status transaction_status
@@ -118,9 +118,9 @@ enum transaction_status {
 }
 
 model Review {
-  id Int @id @default(autoincrement())
-  event_id Int
-  user_id Int
+  id String @id @default(uuid())
+  event_id String
+  user_id String
   rating Int @db.SmallInt
   review String
   created_at DateTime @default(now())
@@ -130,7 +130,7 @@ model Review {
 }
 
 model User {
-  id Int @id @default(autoincrement())
+  id String @id @default(uuid())
   first_name String @default("")
   last_name String @default("")
   username String @unique
@@ -138,7 +138,7 @@ model User {
   password String
   user_referral_code String? @unique
   profile_picture String?
-  referer_id Int?
+  referer_id String?
   created_at DateTime @default(now())
   updated_at DateTime @default(now())
 // reset_token      String?   
@@ -153,6 +153,8 @@ model User {
   coupons Coupon[]
   reviews Review[]
   event Event[]
+  referer User? @relation("UserReferer", fields: [referer_id], references: [id])
+  referred User[] @relation("UserReferer")
 }
 
 enum role {
@@ -162,9 +164,9 @@ enum role {
 }
 
 model Referral {
-  id Int @id @default(autoincrement())
-  user_id_referer Int
-  user_id_referred Int
+  id String @id @default(uuid())
+  user_id_referer String
+  user_id_referred String
   points_reward Int
   user_referrer User @relation(name: "UserReferrer", fields: [user_id_referer], references: [id])
   user_referred User @relation(name: "UserReferred", fields: [user_id_referred], references: [id])

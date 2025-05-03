@@ -1,6 +1,7 @@
 import { role } from "@prisma/client"; //import enum from prisma
 
 export interface IRegisterParam {
+  id: string;
   first_name: string;
   last_name: string;
   email: string;
@@ -13,4 +14,12 @@ export interface IRegisterParam {
 export interface ILoginParam {
   email: string;
   password: string;
+}
+
+export interface IJwtPayloadParam {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  role: role;
 }

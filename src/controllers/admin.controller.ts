@@ -12,11 +12,11 @@ async function GetOrganizerProfileController(
   next: NextFunction
 ) {
   try {
-    const organizerId = Number(req.params.id);
+    const organizerId = String(req.params.id);
 
-    if (isNaN(organizerId)) {
-      throw new Error("Invalid organizer ID");
-    }
+    // if (isNaN(organizerId)) {
+    //   throw new Error("Invalid organizer ID");
+    // }
 
     const profile = await GetOrganizerProfileService(organizerId);
 

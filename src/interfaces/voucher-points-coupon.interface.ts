@@ -1,5 +1,5 @@
 export interface ICreatePointsParam {
-  userId: number;
+  userId: string;
   pointsAmount: number;
   creditedAt: Date;
   expiresAt: Date;
@@ -8,7 +8,7 @@ export interface ICreatePointsParam {
 }
 
 export interface ICreateCouponParam {
-  userId: number;
+  userId: string;
   couponCode: string;
   discountAmount: number;
   couponStartDate: Date;

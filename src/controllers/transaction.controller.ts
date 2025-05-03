@@ -33,7 +33,7 @@ async function PaymentTransactionController(
     const { id: transactionId } = req.params;
     // const userId = req.user?.id; // Assuming you're attaching the authenticated user to req.user
     // const { userId } = req.body; // Ngambil dari body dulu, karena belum ada authentication
-    const userId = Number(req.body.userId);
+    const userId = String(req.body.userId);
 
     if (!req.file) {
       return next(new Error("Payment proof image is required"));
@@ -44,7 +44,7 @@ async function PaymentTransactionController(
     }
 
     const updatedTransaction = await PaymentTransactionService({
-      transactionId: Number(transactionId),
+      transactionId: String(transactionId),
       userId,
       file: req.file,
     });
@@ -69,7 +69,7 @@ async function EOActionTransactionController(
   try {
     const { transactionId } = req.params; // Extract transactionId from the URL params
     const { action } = req.body; // Get the action from the request body
-    const eoId = Number(req.body.eoId); // Get the userId from the request body
+    const eoId = String(req.body.eoId); // Get the userId from the request body
 
     // Validate if transactionId or action is missing
     if (!transactionId || !action) {
@@ -83,7 +83,7 @@ async function EOActionTransactionController(
 
     // Call the service to perform the action (confirm/reject) on the transaction
     const updatedTransaction = await EOActionTransactionService({
-      transactionId: Number(transactionId),
+      transactionId: String(transactionId),
       eoId,
       action,
     });

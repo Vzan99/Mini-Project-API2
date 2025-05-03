@@ -11,6 +11,7 @@ async function CreateEventController(
     const event = await CreateEventService({
       ...req.body,
       file: req.file, // Multer-attached file
+      organizerId: req.body?.id, // alwi: menambahkan userid
     });
 
     res.status(201).json({

@@ -1,6 +1,6 @@
 export interface ICreateReviewParam {
-  userId: number;
-  eventId: number;
+  userId: string;
+  eventId: string;
   rating: number; // e.g. 1–5
   review: string;
 }

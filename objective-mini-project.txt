@@ -1,0 +1,73 @@
+Event Management Platform
+
+Objective  
+The main goal of the MVP is to create a simple and functional event management platform that allows event organizers to create and promote events, while attendees can browse and register for those events.
+
+Core Features  
+
+Feature 1  
+
+Event Discovery, Details, Creation, and Promotion (4 point)  
+- Landing Page: Display a list of upcoming events.  
+- Event Browsing: Customers can browse events, filter by category/location, and view event details.  
+- Search Bar: Implement a search bar with debounce functionality.  
+- Responsiveness is a must.  
+- Event Creation: Event organizers can create events with details such as name, price, start date, end date, available seats, description, ticket types (if applicable), etc.  
+- Pricing: Events can be free or paid. If paid, customers are charged accordingly.  
+- Promotions: Event organizers can create limited-time voucher promotions specific to events, with defined start and end dates.  
+
+Event Transaction (4 point)  
+- Purchasing: Customers can create transactions to buy event tickets.  
+- Transaction Statuses: There are six statuses: waiting for payment, waiting for admin confirmation, done, rejected, expired and canceled.  
+- Payment Proof: After choosing a ticket and checking out, a 2-hour countdown is shown for uploading the payment proof.  
+- Automatic Status Changes: Transactions expire if no payment proof is uploaded within 2 hours. If the organizer doesn't accept/reject within 3 days, the transaction is automatically canceled.  
+- Rollbacks and Seat Restoration: Points, vouchers, or coupons used in transactions are returned if the transaction is canceled or expired. Additionally, available seats are restored.  
+- Point Usage: Customers can use points to reduce payment amounts. (ex: event tickets price is IDR 300.000 while your points balance is 20.000, you could use it and get IDR 280.000 as the final price)  
+- Uses only IDR in each prices of items  
+
+Event Reviews and Ratings (2 point)  
+- Reviews: Customers can leave reviews and ratings only after attending the event.  
+- Organizer Profile: Show ratings and reviews on the event organizer's profile.  
+
+Feature 2  
+
+User Authentication and Authorization (2 point)  
+- ✅ Account Creation: Customers must create an account to attend events.  
+- ✅ Roles: There are two roles: customer and event organizer.  
+- ✅ Referral Registration: Customers can register using a referral number.  
+- ✅ Referral Generation: Referral numbers are generated for new users and cannot be changed.  
+- ✅ Role-Based Access: Protect pages based on user roles.  
+
+Referral System, Profile, and Prizes (4 point)  
+- ✅ Referral Rewards: Users registering with a referral get a discount coupon, and the referrer gets 10,000 points.  
+- ✅ Points Expiration: Points expire 3 months after being credited. (ex: today is 28 Dec 2023 and there are 3 people using your referral number, your balance would be 30.000 and available until 28 March 2024.)  
+- ✅ Coupon Expiration: Discount coupons after registering with referral are valid for 3 months.  
+- Profile: Customers and Event organizers can edit their profiles, including updating their profile picture, changing their password, and resetting their password if forgotten.  
+
+Event Management Dashboard (4 point)  
+- Dashboard Access: Organizers can view and manage their events (ex: edit events, etc.), transactions, and basic statistics.  
+- Statistics Visualization: Display event data in graphical visualizations and reports by year, month, and day.  
+- Transaction Management: Organizers can accept, reject, and view user payment proofs.  
+- Notification Emails: Customers receive email notifications when their transaction is accepted or rejected. Ensure points/vouchers/coupons are returned if used in rejected transactions. Additionally, available seats are restored.  
+- Attendee List: Show the list of attendees for each event, including name, ticket quantity, and total price paid.  
+
+Clues:  
+- Voucher Discount: This is provided by the event organizer and can only be used for specific events organized by them.  
+- Reward / Coupon Discount: This is provided by the application system and can be used for all events.  
+
+Notes:  
+- Protected route should implemented  
+- Responsiveness is a must  
+- Implement debounce on search bar  
+- Implement popup dialog as confirmation on modify data  
+- Create unit test on each flows  
+- Handle if there are no items shows in filter or search  
+- Implement SQL transaction on modify action that more than one action  
+- Provide data that relevant to the projects  
+
+References  
+https://www.eventbrite.com/  
+https://www.eventbookings.com/explore-events/  
+https://www.tickettailor.com/discover/  
+https://www.viagogo.com/ww  
+https://www.loket.com/

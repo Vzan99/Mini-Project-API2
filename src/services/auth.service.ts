@@ -8,7 +8,7 @@ import { genSaltSync, hash, compare } from "bcrypt";
 import { sign } from "jsonwebtoken";
 
 import { SECRET_KEY } from "../config";
-import { randomBytes } from "crypto";
+import { transporter } from "../utils/nodemailer";
 import {
   generateUniqueReferralCode,
   findUserByReferralCode,
@@ -145,6 +145,28 @@ async function RegisterService(param: IRegisterParam) {
         });
       }
       return newUser;
+    });
+
+    await transporter.sendMail({
+      from: '"Ticket Admin" <no-reply@yourdomain.com>',
+      to: param.email,
+      subject: "🎉 Registration Successful — Welcome to Ticket!",
+      html: `
+    <div style="font-family: sans-serif; color: #333;">
+      <h2 style="color: #4F46E5;">Welcome to Ticket 🎫</h2>
+      <p>Hi ${param.username || "there"},</p>
+      <p>Thank you for registering! Your account has been successfully created.</p>
+      <p>Start exploring events, book your tickets, and be part of the experiences that matter.</p>
+      <div style="margin: 24px 0;">
+        <a href="https://yourdomain.com/login" 
+           style="background-color: #4F46E5; color: white; padding: 12px 20px; text-decoration: none; border-radius: 6px;">
+          Go to Dashboard
+        </a>
+      </div>
+      <p>If you have any questions, feel free to reply to this email.</p>
+      <p>Cheers,<br /><strong>Ticket Team</strong></p>
+    </div>
+  `,
     });
     return user;
   } catch (err) {

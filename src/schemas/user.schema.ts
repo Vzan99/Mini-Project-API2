@@ -15,7 +15,10 @@ export const registerSchema = z.object({
     .nonempty("Password is required"),
   first_name: z.string().nonempty("First name is required"),
   last_name: z.string().nonempty("Last name is required"),
-  username: z.string().nonempty("Username is required"),
+  username: z
+    .string()
+    .min(5, "Username must be at least 5 characters")
+    .nonempty("Username is required"),
   referral_code: z.string().optional(),
   role: z.nativeEnum(role).optional(),
 });
@@ -23,3 +26,5 @@ export const loginSchema = z.object({
   email: z.string().email("invalid email format").trim(),
   password: z.string().nonempty("Password is required"),
 });
+
+

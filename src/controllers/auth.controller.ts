@@ -26,7 +26,7 @@ async function LoginController(
   try {
     const data = await LoginService(req.body);
     res.status(201).send({
-      message: "Register Success!",
+      message: "Login Success!",
       user: data,
     });
   } catch (err) {

@@ -51,95 +51,6 @@ async function GetOrganizerProfileService(organizerId: string) {
   }
 }
 
-async function FilterEventsService(filters: FilterParams) {
-  try {
-    const whereClause: any = {};
-    const now = new Date();
-
-    // Keyword search (name or description)
-    if (filters.keyword) {
-      whereClause.OR = [
-        { name: { contains: filters.keyword, mode: "insensitive" } },
-        { description: { contains: filters.keyword, mode: "insensitive" } },
-      ];
-    }
-
-    // Category filter
-    if (filters.category) {
-      whereClause.category = filters.category;
-    }
-
-    // Location filter
-    if (filters.location) {
-      whereClause.location = {
-        contains: filters.location,
-        mode: "insensitive",
-      };
-    }
-
-    // Price range filter
-    if (filters.minPrice !== undefined || filters.maxPrice !== undefined) {
-      whereClause.price = {};
-      if (filters.minPrice !== undefined) {
-        whereClause.price.gte = filters.minPrice;
-      }
-      if (filters.maxPrice !== undefined) {
-        whereClause.price.lte = filters.maxPrice;
-      }
-    }
-
-    // Date range filter
-    if (filters.startDate) {
-      whereClause.start_date = { gte: filters.startDate };
-    } else {
-      whereClause.start_date = { gte: now };
-    }
-
-    if (filters.endDate) {
-      whereClause.end_date = {
-        ...(whereClause.end_date || {}),
-        lte: filters.endDate,
-      };
-    }
-
-    // Sorting by field (e.g., name, price, start_date)
-    const sortBy = filters.sortBy || "start_date"; // Default sort by start_date
-    const sortOrder = filters.sortOrder || "asc"; // Default sort order is ascending
-
-    // Validate sortBy field
-    const validSortFields = ["name", "price", "start_date", "location"];
-    if (!validSortFields.includes(sortBy)) {
-      throw new Error("Invalid sort field.");
-    }
-
-    // Pagination
-    const page = filters.page || 1;
-    const limit = filters.limit || 10;
-
-    // Query the database with pagination and sorting
-    const events = await prisma.event.findMany({
-      where: whereClause,
-      orderBy: {
-        [sortBy]: sortOrder,
-      },
-      take: limit,
-      skip: (page - 1) * limit,
-      include: {
-        review: true,
-      },
-    });
-
-    // Handle no results found
-    if (events.length === 0) {
-      return { message: "No events found matching the filters." };
-    }
-
-    return events;
-  } catch (err) {
-    throw err;
-  }
-}
-
 async function GetCardSectionsService(categoryFilter?: category) {
   try {
     const now = new Date();
@@ -179,6 +90,5 @@ async function GetCardSectionsService(categoryFilter?: category) {
 
 export {
   GetOrganizerProfileService,
-  FilterEventsService,
   GetCardSectionsService,
 };

@@ -1,16 +1,42 @@
 import { Router } from "express";
-import { CreateEventController } from "../controllers/event.controller";
+import {
+  CreateEventController,
+  GetEventByIdController,
+  SearchEventsController,
+  FilterEventsController,
+} from "../controllers/event.controller";
 import ReqValidator from "../middlewares/reqValidator.middleware";
-import { createEventSchema } from "../schemas/event.schema";
+import QueryValidator from "../middlewares/queryValidator.middleware";
+import ParamValidator from "../middlewares/paramValidator.middleware";
+import {
+  createEventSchema,
+  searchEventSchema,
+  eventIdSchema,
+  filterEventSchema,
+} from "../schemas/event.schema";
 import { Multer } from "../utils/multer";
-import { GetEventByIdController } from "../controllers/event.controller";
 import { TokenVerification } from "../middlewares/auth.middleware";
 
 const router = Router();
 
-router.get("/:id", GetEventByIdController);
+// Search events - with query validation
+router.get(
+  "/search",
+  QueryValidator(searchEventSchema),
+  SearchEventsController
+);
 
-//Create Event
+// Filter all events by category, location, date, and price using query
+router.get(
+  "/filter", // Endpoint for filtering events
+  QueryValidator(filterEventSchema), // Validate query parameters
+  FilterEventsController // Your controller logic
+);
+
+// Get event by ID - with param validation
+router.get("/:id", ParamValidator(eventIdSchema), GetEventByIdController);
+
+// Create Event
 router.post(
   "/",
   TokenVerification,

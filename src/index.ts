@@ -19,11 +19,13 @@ const app: Application = express();
 
 //Middleware
 app.use(express.json());
-app.use(cors());
 
 app.use(
   cors({
-    origin: "http://localhost:3000", // Your frontend URL
+    origin: ["http://localhost:3000", "http://127.0.0.1:3000"], // Allow both localhost variations
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
   })
 );
 

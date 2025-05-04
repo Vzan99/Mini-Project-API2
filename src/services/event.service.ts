@@ -2,6 +2,7 @@ import prisma from "../lib/prisma";
 import { ICreateEventParam } from "../interfaces/event.interface";
 import { cloudinaryUpload, cloudinaryRemove } from "../utils/cloudinary";
 import { UUID } from "crypto";
+import { FilterParams } from "../interfaces/filter.interface";
 
 async function CreateEventService(param: ICreateEventParam) {
   let imageUrl: string | null = null;
@@ -86,4 +87,126 @@ async function GetEventByIdService(id: string) {
   }
 }
 
-export { CreateEventService, GetEventByIdService };
+async function SearchEventsService(searchTerm: string, limit: number = 10) {
+  try {
+    // Search for events that match the search term in name, description, or location
+    const events = await prisma.event.findMany({
+      where: {
+        OR: [
+          { name: { contains: searchTerm, mode: "insensitive" } },
+          { description: { contains: searchTerm, mode: "insensitive" } },
+          { location: { contains: searchTerm, mode: "insensitive" } },
+        ],
+      },
+      take: limit,
+      orderBy: {
+        start_date: "asc", // Sort by upcoming events first
+      },
+      include: {
+        organizer: {
+          select: {
+            id: true,
+            username: true,
+            first_name: true,
+            last_name: true,
+          },
+        },
+      },
+    });
+
+    return events;
+  } catch (err) {
+    throw err;
+  }
+}
+
+async function FilterEventsService(filters: FilterParams) {
+  try {
+    const whereClause: any = {};
+    const now = new Date();
+
+    // Keyword search (name or description)
+    if (filters.keyword) {
+      whereClause.OR = [
+        { name: { contains: filters.keyword, mode: "insensitive" } },
+        { description: { contains: filters.keyword, mode: "insensitive" } },
+      ];
+    }
+
+    // Category filter
+    if (filters.category) {
+      whereClause.category = filters.category;
+    }
+
+    // Location filter
+    if (filters.location) {
+      whereClause.location = {
+        contains: filters.location,
+        mode: "insensitive",
+      };
+    }
+
+    // Price range filter
+    if (filters.minPrice !== undefined || filters.maxPrice !== undefined) {
+      whereClause.price = {};
+      if (filters.minPrice !== undefined) {
+        whereClause.price.gte = filters.minPrice;
+      }
+      if (filters.maxPrice !== undefined) {
+        whereClause.price.lte = filters.maxPrice;
+      }
+    }
+
+    // Date range filter
+    if (filters.startDate) {
+      whereClause.start_date = { gte: filters.startDate };
+    } else {
+      whereClause.start_date = { gte: now };
+    }
+
+    if (filters.endDate) {
+      whereClause.end_date = {
+        ...(whereClause.end_date || {}),
+        lte: filters.endDate,
+      };
+    }
+
+    // Sorting by field (e.g., name, price, start_date)
+    const sortBy = filters.sortBy || "start_date"; // Default sort by start_date
+    const sortOrder = filters.sortOrder || "asc"; // Default sort order is ascending
+
+    // Validate sortBy field
+    const validSortFields = ["name", "price", "start_date", "location"];
+    if (!validSortFields.includes(sortBy)) {
+      throw new Error("Invalid sort field.");
+    }
+
+    // Pagination
+    const page = filters.page || 1;
+    const limit = filters.limit || 10;
+
+    // Query the database with pagination and sorting
+    const events = await prisma.event.findMany({
+      where: whereClause,
+      orderBy: {
+        [sortBy]: sortOrder,
+      },
+      take: limit,
+      skip: (page - 1) * limit,
+      include: {
+        review: true,
+      },
+    });
+
+    // Handle no results found
+    if (events.length === 0) {
+      return { message: "No events found matching the filters." };
+    }
+
+    return events;
+  } catch (err) {
+    throw err;
+  }
+}
+
+export { CreateEventService, GetEventByIdService, SearchEventsService, FilterEventsService };

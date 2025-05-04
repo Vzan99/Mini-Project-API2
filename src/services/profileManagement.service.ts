@@ -124,7 +124,7 @@ async function resetPasswordService(param: iResetPasswordParam) {
     const { email, reset_token, newPassword } = param;
 
     return await prisma.$transaction(async (tx) => {
-      // Find user within transaction
+      // Find user within transaction - use findFirst instead of findUnique
       const user = await tx.user.findFirst({
         where: { email },
         select: {
@@ -137,6 +137,10 @@ async function resetPasswordService(param: iResetPasswordParam) {
       if (!user) {
         throw new Error("User not found");
       }
+
+      // Debug logs
+      console.log("User token from DB:", user.reset_token);
+      console.log("Token from request:", reset_token);
 
       // Verify token
       if (user.reset_token !== reset_token) {

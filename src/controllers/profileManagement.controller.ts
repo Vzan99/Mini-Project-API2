@@ -125,11 +125,7 @@ async function UploadProfilePictureController(
     const userId = req.user.id;
 
     if (!req.file) {
-      return res.status(400).json({
-        status: "error",
-        message: "No file uploaded",
-        data: null,
-      });
+      throw new Error("file not found");
     }
 
     const result = await uploadProfilePictureService({

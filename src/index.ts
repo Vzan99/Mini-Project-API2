@@ -10,6 +10,7 @@ import ReviewRouter from "./routers/review.router";
 import AuthRouter from "./routers/auth.router";
 import Test from "./routers/testdata.router";
 import AdminRouter from "./routers/admin.router";
+import ProfileRouter from "./routers/profileManagement.router";
 
 import { AutoExpireTransactionTask } from "./utils/cron/expire-transaction-task";
 import { AutoCancelTransactionTask } from "./utils/cron/cancel-transaction-task";
@@ -59,6 +60,9 @@ app.use("/testdata", Test);
 
 //Admin (multiuse for get, filter, etc)
 app.use("/admin", AdminRouter);
+
+//Profile
+app.use("/profile", ProfileRouter);
 
 //Port
 app.listen(port, () => {

@@ -16,6 +16,7 @@ import {
 } from "../schemas/event.schema";
 import { Multer } from "../utils/multer";
 import { TokenVerification } from "../middlewares/auth.middleware";
+import { RoleChecker } from "../middlewares/roleChecker.middleware";
 
 const router = Router();
 
@@ -40,6 +41,7 @@ router.get("/:id", ParamValidator(eventIdSchema), GetEventByIdController);
 router.post(
   "/",
   TokenVerification,
+  RoleChecker(["event_organizer", "dev_admin"]),
   Multer().single("eventImage"),
   ReqValidator(createEventSchema),
   CreateEventController

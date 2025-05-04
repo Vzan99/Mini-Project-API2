@@ -141,8 +141,8 @@ model User {
   referer_id String?
   created_at DateTime @default(now())
   updated_at DateTime @default(now())
-// reset_token      String?   
-// reset_expires_at DateTime?
+  reset_token      String?   
+  reset_expires_at DateTime?
 
   //Relations
   role role @default(customer)

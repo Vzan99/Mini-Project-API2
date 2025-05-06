@@ -256,16 +256,62 @@ async function EOActionTransactionService(param: IEOActionTransactionParam) {
       throw new Error("Invalid action");
     }
 
-    // Update the transaction status
-    const updatedTransaction = await prisma.transaction.update({
-      where: { id: transactionId },
-      data: {
-        status: updatedStatus,
-        updated_at: new Date(),
-      },
-    });
+    // If rejecting, perform rollback in a transaction
+    if (updatedStatus === transaction_status.rejected) {
+      return await prisma.$transaction(async (txClient) => {
+        // a) Restore seats
+        await txClient.event.update({
+          where: { id: transaction.event_id },
+          data: { remaining_seats: { increment: transaction.quantity } },
+        });
 
-    return updatedTransaction;
+        // b) Refund coupon usage
+        if (transaction.coupon_id) {
+          await txClient.coupon.update({
+            where: { id: transaction.coupon_id },
+            data: { use_count: { decrement: 1 } },
+          });
+        }
+
+        // c) Refund voucher usage
+        if (transaction.voucher_id) {
+          await txClient.voucher.update({
+            where: { id: transaction.voucher_id },
+            data: { usage_amount: { decrement: 1 } },
+          });
+        }
+
+        // d) Mark points unused
+        if (transaction.points_id) {
+          await txClient.points.update({
+            where: { id: transaction.points_id },
+            data: { is_used: false },
+          });
+        }
+
+        // e) Update the transaction status
+        const updatedTransaction = await txClient.transaction.update({
+          where: { id: transactionId },
+          data: {
+            status: updatedStatus,
+            updated_at: new Date(),
+          },
+        });
+
+        return updatedTransaction;
+      });
+    } else {
+      // For confirmation, just update the status
+      const updatedTransaction = await prisma.transaction.update({
+        where: { id: transactionId },
+        data: {
+          status: updatedStatus,
+          updated_at: new Date(),
+        },
+      });
+
+      return updatedTransaction;
+    }
   } catch (err) {
     throw err;
   }
@@ -291,6 +337,8 @@ async function AutoExpireTransactionService() {
 
 async function AutoCancelTransactionService() {
   try {
+    console.log("function auto cancel berjalan");
+
     const now = new Date();
     const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
 

@@ -398,7 +398,15 @@ async function generateTimeSeriesData(
 
   // Group by day, month, or year based on timeFilter
   const groupBy = timeFilter?.type || "month";
-  const seriesData = {};
+
+  // Define the type for seriesData to fix TypeScript errors
+  interface SeriesDataItem {
+    events: number;
+    attendees: number;
+    revenue: number;
+  }
+
+  const seriesData: Record<string, SeriesDataItem> = {};
 
   events.forEach((event) => {
     let dateKey;

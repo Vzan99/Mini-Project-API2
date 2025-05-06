@@ -2,7 +2,7 @@ import { transaction_status, category } from "@prisma/client";
 
 // Filter waktu dengan detail
 export interface IDateFilterParams {
-  filterType?: "day" | "week" | "month" | "year";
+  type?: "day" | "week" | "month" | "year";
   year?: number;
   month?: number;
   day?: number;
@@ -24,6 +24,12 @@ export interface IEventStatistics {
     amount: number;
     status: transaction_status;
     date: Date;
+  }>;
+  timeSeriesData: Array<{
+    date: string;
+    events: number;
+    attendees: number;
+    revenue: number;
   }>;
 }
 

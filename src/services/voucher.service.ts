@@ -13,8 +13,10 @@ async function CreateVoucherService(param: ICreateVoucher) {
     } = param;
 
     // Validation
-    if (!voucherCode || voucherCode.trim() === "") {
-      throw new Error("Voucher code is required.");
+    if (!voucherCode || voucherCode.trim() === "" || voucherCode.length < 5) {
+      throw new Error(
+        "Voucher code is required and must be at least 5 characters."
+      );
     }
 
     if (discountAmount <= 0) {
@@ -29,9 +31,13 @@ async function CreateVoucherService(param: ICreateVoucher) {
       throw new Error("Voucher end date must be after start date.");
     }
 
-    // Ensure voucher start date is not in the past
-    if (new Date(voucherStartDate).getTime() < Date.now() - 1000) {
-      throw new Error("Voucher start date cannot be in the past.");
+    // Allow voucher start date to be up to 2 days in the past
+    const twoDaysAgo = new Date();
+    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+    if (new Date(voucherStartDate) < twoDaysAgo) {
+      throw new Error(
+        "Voucher start date cannot be more than 2 days in the past."
+      );
     }
 
     // Check if the voucher code already exists for the event
@@ -53,6 +59,25 @@ async function CreateVoucherService(param: ICreateVoucher) {
 
     if (!event) {
       throw new Error("Event not found.");
+    }
+
+    // Check if the voucher discount is greater than the event price
+    if (discountAmount > event.price) {
+      throw new Error(
+        "Voucher discount cannot be greater than the event price."
+      );
+    }
+
+    // Check if voucher end date is after event end date
+    if (voucherEndDate > event.end_date) {
+      throw new Error("Voucher end date cannot be after the event end date.");
+    }
+
+    // Check if max usage exceeds total event seats
+    if (maxUsage > event.total_seats) {
+      throw new Error(
+        "Max usage cannot exceed the total number of event seats."
+      );
     }
 
     // Check if the voucher is already expired

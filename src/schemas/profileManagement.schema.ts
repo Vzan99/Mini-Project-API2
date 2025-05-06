@@ -1,10 +1,24 @@
 import z from "zod";
 
-export const updateProfileSchema = z.object({
-  first_name: z.string(),
-  last_name: z.string(),
-  username: z.string().min(5, "Username must be at least 5 characters"),
-});
+export const updateProfileSchema = z
+  .object({
+    first_name: z.string().optional(),
+    last_name: z.string().optional(),
+    username: z
+      .string()
+      .min(5, "Username must be at least 5 characters")
+      .optional(),
+  })
+  .refine(
+    (data) => {
+      // Pastikan setidaknya satu field diisi
+      return Object.values(data).some((value) => value !== undefined);
+    },
+    {
+      message: "At least one field must be provided",
+      path: [],
+    }
+  );
 
 export const changePasswordSchema = z.object({
   current_password: z

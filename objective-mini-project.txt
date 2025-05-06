@@ -43,6 +43,10 @@ Referral System, Profile, and Prizes (4 point)
 - ✅ Points Expiration: Points expire 3 months after being credited. (ex: today is 28 Dec 2023 and there are 3 people using your referral number, your balance would be 30.000 and available until 28 March 2024.)  
 - ✅ Coupon Expiration: Discount coupons after registering with referral are valid for 3 months.  
 - Profile: Customers and Event organizers can edit their profiles, including updating their profile picture, changing their password, and resetting their password if forgotten.  
+  - ✅ Update profile information (name, username)
+  - ✅ Upload profile picture
+  - ✅ Change password
+  - ✅ Reset forgotten password
 
 Event Management Dashboard (4 point)  
 - Dashboard Access: Organizers can view and manage their events (ex: edit events, etc.), transactions, and basic statistics.  

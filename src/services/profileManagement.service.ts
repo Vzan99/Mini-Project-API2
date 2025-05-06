@@ -279,10 +279,6 @@ async function uploadProfilePictureService(param: iUploadProfilePictureParam) {
         select: { profile_picture: true },
       });
 
-      if (!currentUser) {
-        throw new Error("User not found");
-      }
-
       // Update the user's profile picture
       const updatedUser = await t.user.update({
         where: { id: param.id },
@@ -304,7 +300,7 @@ async function uploadProfilePictureService(param: iUploadProfilePictureParam) {
 
       return {
         updatedUser,
-        oldPicture: currentUser.profile_picture,
+        oldPicture: currentUser?.profile_picture,
       };
     });
 

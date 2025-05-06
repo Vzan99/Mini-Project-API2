@@ -17,41 +17,7 @@ import Handlebars from "handlebars";
 import path from "path";
 import fs from "fs";
 
-async function findUserByEmail(email: string) {
-  try {
-    // find user by email using prisma and show only email, first_name, last_name, password, and role
-    const user = await prisma.user.findFirst({
-      select: {
-        id: true,
-        email: true,
-        first_name: true,
-        last_name: true,
-        password: true,
-        role: true,
-      },
-      where: {
-        email,
-      },
-    });
-    return user;
-  } catch (err) {
-    throw err;
-  }
-}
-
-async function findUserByUsername(username: string) {
-  try {
-    // find user by username
-    const user = await prisma.user.findFirst({
-      where: {
-        username,
-      },
-    });
-    return user;
-  } catch (err) {
-    throw err;
-  }
-}
+import { findUserByEmail, findUserByUsername } from "../helper/userFinder";
 
 async function RegisterService(param: IRegisterParam) {
   try {

@@ -56,5 +56,3 @@ router.post(
 );
 
 export default router;
-
-// https://yourdomain.com/reset-password?email=hansgotze99@gmail.com&token=47658ca925e0e680bb473f2e6938e25d89c0ce5b90d1693cbb5303be13e661bc

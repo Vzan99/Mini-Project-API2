@@ -146,8 +146,13 @@ async function FilterEventsService(filters: FilterParams) {
       };
     }
 
-    // Price range filter
-    if (filters.minPrice !== undefined || filters.maxPrice !== undefined) {
+    // Price filters - handle freeOnly first
+    if (filters.freeOnly) {
+      whereClause.price = 0;
+    } else if (
+      filters.minPrice !== undefined ||
+      filters.maxPrice !== undefined
+    ) {
       whereClause.price = {};
       if (filters.minPrice !== undefined) {
         whereClause.price.gte = filters.minPrice;
@@ -157,18 +162,33 @@ async function FilterEventsService(filters: FilterParams) {
       }
     }
 
-    // Date range filter
-    if (filters.startDate) {
-      whereClause.start_date = { gte: filters.startDate };
-    } else {
-      whereClause.start_date = { gte: now };
+    // Available seats filter
+    if (filters.availableSeatsOnly) {
+      whereClause.remaining_seats = { gt: 0 };
     }
 
-    if (filters.endDate) {
-      whereClause.end_date = {
-        ...(whereClause.end_date || {}),
-        lte: filters.endDate,
-      };
+    // Handle specific date filter (new)
+    if (filters.specificDate) {
+      // Find events where the specific date falls within the event's date range
+      // (start_date <= specificDate <= end_date)
+      whereClause.AND = [
+        { start_date: { lte: filters.specificDate } },
+        { end_date: { gte: filters.specificDate } },
+      ];
+    } else {
+      // Use existing date range filters only if specificDate is not provided
+      if (filters.startDate) {
+        whereClause.start_date = { gte: filters.startDate };
+      } else {
+        whereClause.start_date = { gte: now };
+      }
+
+      if (filters.endDate) {
+        whereClause.end_date = {
+          ...(whereClause.end_date || {}),
+          lte: filters.endDate,
+        };
+      }
     }
 
     // Sorting by field (e.g., name, price, start_date)
@@ -194,7 +214,14 @@ async function FilterEventsService(filters: FilterParams) {
       take: limit,
       skip: (page - 1) * limit,
       include: {
-        review: true,
+        organizer: {
+          select: {
+            id: true,
+            username: true,
+            first_name: true,
+            last_name: true,
+          },
+        },
       },
     });
 
@@ -209,4 +236,9 @@ async function FilterEventsService(filters: FilterParams) {
   }
 }
 
-export { CreateEventService, GetEventByIdService, SearchEventsService, FilterEventsService };
+export {
+  CreateEventService,
+  GetEventByIdService,
+  SearchEventsService,
+  FilterEventsService,
+};

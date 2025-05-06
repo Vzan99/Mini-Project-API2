@@ -9,7 +9,7 @@ const router = Router();
 // Get Organizers data
 router.get("/organizers/:id", GetOrganizerProfileController);
 
-// Get Card data for Each Sections
+// Get Card data for Each Sections (Only for home page)
 router.get("/sections", GetCardSectionsController);
 
 export default router;

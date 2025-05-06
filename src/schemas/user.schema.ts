@@ -26,5 +26,3 @@ export const loginSchema = z.object({
   email: z.string().email("invalid email format").trim(),
   password: z.string().nonempty("Password is required"),
 });
-
-

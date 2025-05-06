@@ -13,6 +13,10 @@ import {
 import { cloudinaryUpload, cloudinaryRemove } from "../utils/cloudinary";
 import { NODEMAILER_USER } from "../config";
 
+import Handlebars from "handlebars";
+import path from "path";
+import fs from "fs";
+
 function generateResetToken(): string {
   return randomBytes(32).toString("hex");
 }
@@ -62,24 +66,23 @@ async function forgotPasswordService(param: iForgotPasswordParam) {
       },
     });
 
+    const forgotPassEmailTemplate = path.join(
+      __dirname,
+      "../templates/",
+      "forgotPassword.template.hbs"
+    );
+    const templateSource = fs.readFileSync(forgotPassEmailTemplate, "utf8");
+    const forgotPassCompiledTemplate = Handlebars.compile(templateSource);
+    const htmlContent = forgotPassCompiledTemplate({
+      email,
+      resetToken,
+    });
+
     await transporter.sendMail({
       from: `"Ticket Admin" ${NODEMAILER_USER}`,
       to: email,
       subject: "Password Reset Request",
-      html: `
-        <div style="font-family: sans-serif; color: #333;">
-          <h2 style="color: #4F46E5;">Reset Your Password</h2>
-          <p>You requested a password reset for your Ticket account.</p>
-          <p>Click the button below to set a new password. This link is valid for 24 hours.</p>
-          <div style="margin: 24px 0;">
-            <a href="https://yourdomain.com/reset-password?email=${email}&token=${resetToken}" 
-               style="background-color: #4F46E5; color: white; padding: 12px 20px; text-decoration: none; border-radius: 6px;">
-              Reset Password
-            </a>
-          </div>
-          <p>If you didn't request this, please ignore this email.</p>
-        </div>
-      `,
+      html: htmlContent,
     });
 
     return { message: "Password reset email sent" };

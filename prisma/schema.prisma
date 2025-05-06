@@ -140,7 +140,7 @@ model User {
   profile_picture String?
   referer_id String?
   created_at DateTime @default(now())
-  updated_at DateTime @default(now())
+  updated_at DateTime @updatedAt
   reset_token      String?   
   reset_expires_at DateTime?
 

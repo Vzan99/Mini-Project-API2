@@ -4,17 +4,23 @@ import { category } from "@prisma/client";
 
 async function GetOrganizerProfileService(organizerId: string) {
   try {
-    // Ensure the user is actually an event_organizer
+    // Ensure the user is actually an event_organizer and get their profile data
     const user = await prisma.user.findUnique({
       where: { id: organizerId },
-      select: { role: true },
+      select: { 
+        role: true,
+        username: true,
+        first_name: true,
+        last_name: true,
+        profile_picture: true
+      },
     });
 
     if (!user || user.role !== "event_organizer") {
       throw new Error("User is not an event organizer");
     }
 
-    // Fetch all events created by this organizer
+    // Fetch all events created by this organizer with more details
     const events = await prisma.event.findMany({
       where: { organizer_id: organizerId },
       include: {
@@ -35,6 +41,13 @@ async function GetOrganizerProfileService(organizerId: string) {
         : 0;
 
     return {
+      organizer: {
+        id: organizerId,
+        username: user.username,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        profilePicture: user.profile_picture
+      },
       averageRating,
       totalReviews: allReviews.length,
       reviews: allReviews,
@@ -43,6 +56,12 @@ async function GetOrganizerProfileService(organizerId: string) {
         name: e.name,
         startDate: e.start_date,
         endDate: e.end_date,
+        location: e.location,
+        price: e.price,
+        totalSeats: e.total_seats,
+        remainingSeats: e.remaining_seats,
+        category: e.category,
+        eventImage: e.event_image,
         totalReviews: e.review.length,
       })),
     };

@@ -7,6 +7,11 @@ import {
 } from "../interfaces/transaction.interface";
 import { cloudinaryRemove, cloudinaryUpload } from "../utils/cloudinary";
 
+import path from "path";
+import fs from "fs";
+import { transporter } from "../utils/nodemailer";
+import handlebars from "handlebars";
+
 //Create Transaction (Click "BuyTicket" Button from event details page)
 async function CreateTransactionService(param: ICreateTransactionParam) {
   const { userId, eventId, quantity, couponId, voucherId, pointsId } = param;
@@ -224,7 +229,15 @@ async function EOActionTransactionService(param: IEOActionTransactionParam) {
     // Fetch the transaction along with its event to ensure the EO is authorized to act
     const transaction = await prisma.transaction.findUnique({
       where: { id: transactionId },
-      include: { event: true },
+      include: {
+        event: true,
+        user: {
+          select: {
+            username: true,
+            email: true,
+          },
+        },
+      },
     });
 
     if (!transaction) throw new Error("Transaction not found");
@@ -296,6 +309,30 @@ async function EOActionTransactionService(param: IEOActionTransactionParam) {
             status: updatedStatus,
             updated_at: new Date(),
           },
+        });
+
+        // d) Send email to customer
+
+        const emailTemplatePatch = path.join(
+          __dirname,
+          "../templates",
+          "ticketRejected.template.hbs"
+        );
+
+        const templateSource = fs.readFileSync(emailTemplatePatch, "utf8");
+        const compiledEmailTemplate = Handlebars.compile(templateSource);
+        const htmlContent = compiledEmailTemplate({
+          username: transaction.user.username,
+          eventName: transaction.event.name,
+          transactionId: transaction.id,
+          rejectionReason: "Your transaction has been rejected",
+        });
+
+        await transporter.sendMail({
+          from: '"Ticket Admin" <no-reply@yourdomain.com>',
+          to: transaction.user.email,
+          subject: "Transaction Rejected",
+          html: htmlContent,
         });
 
         return updatedTransaction;

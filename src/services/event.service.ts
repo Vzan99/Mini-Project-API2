@@ -205,6 +205,14 @@ async function FilterEventsService(filters: FilterParams) {
     const page = filters.page || 1;
     const limit = filters.limit || 10;
 
+    // Count total matching events first (for pagination info)
+    const totalEvents = await prisma.event.count({
+      where: whereClause,
+    });
+
+    // Calculate total pages
+    const totalPages = Math.ceil(totalEvents / limit);
+
     // Query the database with pagination and sorting
     const events = await prisma.event.findMany({
       where: whereClause,
@@ -227,10 +235,26 @@ async function FilterEventsService(filters: FilterParams) {
 
     // Handle no results found
     if (events.length === 0) {
-      return { message: "No events found matching the filters." };
+      return {
+        events: [],
+        pagination: {
+          total: totalEvents,
+          totalPages,
+          currentPage: page,
+          limit,
+        },
+      };
     }
 
-    return events;
+    return {
+      events,
+      pagination: {
+        total: totalEvents,
+        totalPages,
+        currentPage: page,
+        limit,
+      },
+    };
   } catch (err) {
     throw err;
   }

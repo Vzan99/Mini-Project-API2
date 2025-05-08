@@ -347,6 +347,27 @@ async function EOActionTransactionService(param: IEOActionTransactionParam) {
         },
       });
 
+      const emailTempalatePath = path.join(
+        __dirname,
+        "../templates",
+        "ticketConfirmed.template.hbs"
+      );
+
+      const templateSource = fs.readFileSync(emailTempalatePath, "utf8");
+      const compiledEmailTemplate = Handlebars.compile(templateSource);
+      const htmlContent = compiledEmailTemplate({
+        username: transaction.user.username,
+        eventName: transaction.event.name,
+        transactionId: transaction.id,
+      });
+
+      await transporter.sendMail({
+        from: '"Ticket Admin" <no-reply@yourdomain.com>',
+        to: transaction.user.email,
+        subject: "Transaction Confirmed",
+        html: htmlContent,
+      });
+
       return updatedTransaction;
     }
   } catch (err) {

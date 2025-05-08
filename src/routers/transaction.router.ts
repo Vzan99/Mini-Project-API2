@@ -3,6 +3,7 @@ import {
   CreateTransactionController,
   PaymentTransactionController,
   EOActionTransactionController,
+  GetUserTicketsController,
 } from "../controllers/transaction.controller";
 import { Multer } from "../utils/multer";
 import ParamValidator from "../middlewares/paramValidator.middleware"; // Custom param validator
@@ -41,5 +42,8 @@ router.post(
   Multer().single("payment_proof"), // Handle file upload
   PaymentTransactionController
 );
+
+// NEW ENDPOINT: Get user's tickets
+router.get("/tickets", TokenVerification, GetUserTicketsController);
 
 export default router;

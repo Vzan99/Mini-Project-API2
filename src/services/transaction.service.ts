@@ -476,10 +476,52 @@ async function AutoCancelTransactionService() {
   }
 }
 
+async function GetUserTicketsService(userId: string) {
+  try {
+    // Get all tickets belonging to the user with transaction and event details
+    const tickets = await prisma.ticket.findMany({
+      where: {
+        user_id: userId,
+        transaction: {
+          status: transaction_status.confirmed,
+        },
+      },
+      include: {
+        event: {
+          select: {
+            name: true,
+            start_date: true,
+            end_date: true,
+            location: true,
+            event_image: true,
+          },
+        },
+        transaction: {
+          select: {
+            created_at: true,
+            quantity: true,
+            total_pay_amount: true,
+          },
+        },
+      },
+      orderBy: {
+        event: {
+          start_date: "asc",
+        },
+      },
+    });
+
+    return tickets;
+  } catch (err) {
+    throw err;
+  }
+}
+
 export {
   CreateTransactionService,
   PaymentTransactionService,
   EOActionTransactionService,
   AutoExpireTransactionService,
   AutoCancelTransactionService,
+  GetUserTicketsService,
 };

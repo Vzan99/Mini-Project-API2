@@ -34,6 +34,7 @@ model Event {
   transactions Transaction[]
   voucher Voucher[]
   review Review[]
+  tickets Ticket[]
 
   @@index([location])
   @@index([category, start_date])
@@ -45,6 +46,17 @@ enum category {
   Comedy
   Museum
   Others
+}
+
+model Ticket {
+  id String @id @default(uuid())
+  ticket_code String @unique
+  event_id String
+  user_id String
+  transaction_id String
+  //relations
+  transaction Transaction @relation(fields: [transaction_id], references: [id])
+  event Event @relation(fields: [event_id], references: [id])
 }
 
 model Voucher {
@@ -106,6 +118,7 @@ model Transaction {
   voucher Voucher? @relation(fields: [voucher_id], references: [id])
   points Points? @relation(fields: [points_id], references: [id])
   event Event @relation(fields: [event_id], references: [id])
+  tickets Ticket[]
 }
 
 enum transaction_status {

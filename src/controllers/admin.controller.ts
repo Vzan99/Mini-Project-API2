@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import {
   GetOrganizerProfileService,
   GetCardSectionsService,
+  GetUniqueLocationsService,
 } from "../services/admin.service";
 import { category } from "@prisma/client";
 
@@ -46,4 +47,25 @@ async function GetCardSectionsController(
   }
 }
 
-export { GetOrganizerProfileController, GetCardSectionsController };
+async function GetUniqueLocationsController(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const locations = await GetUniqueLocationsService();
+
+    res.status(200).json({
+      message: "Unique locations fetched successfully",
+      data: locations,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export {
+  GetOrganizerProfileController,
+  GetCardSectionsController,
+  GetUniqueLocationsController,
+};

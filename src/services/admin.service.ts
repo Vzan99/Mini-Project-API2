@@ -7,12 +7,12 @@ async function GetOrganizerProfileService(organizerId: string) {
     // Ensure the user is actually an event_organizer and get their profile data
     const user = await prisma.user.findUnique({
       where: { id: organizerId },
-      select: { 
+      select: {
         role: true,
         username: true,
         first_name: true,
         last_name: true,
-        profile_picture: true
+        profile_picture: true,
       },
     });
 
@@ -46,7 +46,7 @@ async function GetOrganizerProfileService(organizerId: string) {
         username: user.username,
         firstName: user.first_name,
         lastName: user.last_name,
-        profilePicture: user.profile_picture
+        profilePicture: user.profile_picture,
       },
       averageRating,
       totalReviews: allReviews.length,
@@ -107,7 +107,28 @@ async function GetCardSectionsService(categoryFilter?: category) {
   }
 }
 
+async function GetUniqueLocationsService() {
+  try {
+    // Get all unique locations from events
+    const locations = await prisma.event.findMany({
+      select: {
+        location: true,
+      },
+      distinct: ["location"],
+      orderBy: {
+        location: "asc",
+      },
+    });
+
+    // Extract just the location strings
+    return locations.map((item) => item.location);
+  } catch (err) {
+    throw err;
+  }
+}
+
 export {
   GetOrganizerProfileService,
   GetCardSectionsService,
+  GetUniqueLocationsService,
 };

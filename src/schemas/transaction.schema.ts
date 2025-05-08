@@ -25,3 +25,8 @@ export const EOActionSchema = z.object({
 export const PaymentParamSchema = z.object({
   id: z.string().uuid(), // From req.params
 });
+
+export const QRISPaymentSchema = z.object({
+  userId: z.string().uuid("Invalid user ID format"),
+  amount: z.number().positive("Amount must be positive"),
+});

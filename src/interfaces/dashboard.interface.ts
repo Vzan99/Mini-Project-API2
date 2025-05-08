@@ -2,7 +2,7 @@ import { transaction_status, category } from "@prisma/client";
 
 // Filter waktu dengan detail
 export interface IDateFilterParams {
-  type?: "day" | "week" | "month" | "year";
+  filterType?: "day" | "week" | "month" | "year";
   year?: number;
   month?: number;
   day?: number;

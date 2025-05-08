@@ -1,6 +1,6 @@
 import express, { Application } from "express";
 import { Request, Response, NextFunction } from "express";
-import { PORT } from "./config";
+import { FE_URL, PORT } from "./config";
 import cors from "cors";
 
 import EventRouter from "./routers/event.router";
@@ -23,7 +23,7 @@ app.use(express.json());
 
 app.use(
   cors({
-    origin: ["http://localhost:3000", "http://127.0.0.1:3000"], // Allow both localhost variations
+    origin: FE_URL,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,

@@ -6,6 +6,7 @@ import {
   IEOActionTransactionParam,
 } from "../interfaces/transaction.interface";
 import { cloudinaryRemove, cloudinaryUpload } from "../utils/cloudinary";
+import { randomBytes } from "crypto";
 
 import path from "path";
 import fs from "fs";
@@ -338,37 +339,59 @@ async function EOActionTransactionService(param: IEOActionTransactionParam) {
         return updatedTransaction;
       });
     } else {
-      // For confirmation, just update the status
-      const updatedTransaction = await prisma.transaction.update({
-        where: { id: transactionId },
-        data: {
-          status: updatedStatus,
-          updated_at: new Date(),
-        },
+      // For confirmation, update status and generate tickets
+      return await prisma.$transaction(async (txClient) => {
+        // Update the transaction status
+        const updatedTransaction = await txClient.transaction.update({
+          where: { id: transactionId },
+          data: {
+            status: updatedStatus,
+            updated_at: new Date(),
+          },
+        });
+
+        // Generate tickets for the confirmed transaction
+        const tickets = [];
+        for (let i = 0; i < transaction.quantity; i++) {
+          // Generate random ticket code
+          const ticketCode = randomBytes(8).toString("hex").toUpperCase();
+
+          const ticket = await txClient.ticket.create({
+            data: {
+              ticket_code: ticketCode,
+              event_id: transaction.event_id,
+              user_id: transaction.user_id,
+              transaction_id: transactionId,
+            },
+          });
+
+          tickets.push(ticket);
+        }
+
+        // Send confirmation email to customer
+        const emailTemplatePath = path.join(
+          __dirname,
+          "../templates",
+          "ticketConfirmed.template.hbs"
+        );
+
+        const templateSource = fs.readFileSync(emailTemplatePath, "utf8");
+        const compiledEmailTemplate = handlebars.compile(templateSource);
+        const htmlContent = compiledEmailTemplate({
+          username: transaction.user.username,
+          eventName: transaction.event.name,
+          transactionId: transaction.id,
+        });
+
+        await transporter.sendMail({
+          from: '"Ticket Admin" <no-reply@yourdomain.com>',
+          to: transaction.user.email,
+          subject: "Transaction Confirmed",
+          html: htmlContent,
+        });
+
+        return { ...updatedTransaction, tickets };
       });
-
-      const emailTempalatePath = path.join(
-        __dirname,
-        "../templates",
-        "ticketConfirmed.template.hbs"
-      );
-
-      const templateSource = fs.readFileSync(emailTempalatePath, "utf8");
-      const compiledEmailTemplate = Handlebars.compile(templateSource);
-      const htmlContent = compiledEmailTemplate({
-        username: transaction.user.username,
-        eventName: transaction.event.name,
-        transactionId: transaction.id,
-      });
-
-      await transporter.sendMail({
-        from: '"Ticket Admin" <no-reply@yourdomain.com>',
-        to: transaction.user.email,
-        subject: "Transaction Confirmed",
-        html: htmlContent,
-      });
-
-      return updatedTransaction;
     }
   } catch (err) {
     throw err;

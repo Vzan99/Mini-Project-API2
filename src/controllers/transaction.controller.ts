@@ -3,6 +3,7 @@ import {
   CreateTransactionService,
   PaymentTransactionService,
   EOActionTransactionService,
+  GetUserTicketsService,
 } from "../services/transaction.service";
 
 async function CreateTransactionController(
@@ -91,8 +92,31 @@ async function EOActionTransactionController(
   }
 }
 
+async function GetUserTicketsController(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    // Get the user ID from the authenticated user
+    const userId = req.user.id;
+
+    // Call the service to get the user's tickets
+    const tickets = await GetUserTicketsService(userId);
+
+    // Send response with the tickets data
+    res.status(200).json({
+      message: "User tickets retrieved successfully",
+      data: tickets,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export {
   CreateTransactionController,
   PaymentTransactionController,
   EOActionTransactionController,
+  GetUserTicketsController,
 };

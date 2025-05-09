@@ -15,7 +15,16 @@ import handlebars from "handlebars";
 
 //Create Transaction (Click "BuyTicket" Button from event details page)
 async function CreateTransactionService(param: ICreateTransactionParam) {
-  const { userId, eventId, quantity, couponId, voucherId, pointsId } = param;
+  const {
+    userId,
+    eventId,
+    quantity,
+    attendDate, // This is already a Date object
+    paymentMethod,
+    couponId,
+    voucherId,
+    pointsId,
+  } = param;
 
   // Check that user doesn't try to use both voucher and coupon
   if (couponId && voucherId) {
@@ -33,6 +42,14 @@ async function CreateTransactionService(param: ICreateTransactionParam) {
   // 2. Check seat availability
   if (event.remaining_seats < quantity) {
     throw new Error("Not enough seats available");
+  }
+
+  // 3. Validate attend date is within event dates
+  const eventStartDate = new Date(event.start_date);
+  const eventEndDate = new Date(event.end_date);
+
+  if (attendDate < eventStartDate || attendDate > eventEndDate) {
+    throw new Error("Attend date must be within event start and end dates");
   }
 
   const now = new Date();
@@ -121,6 +138,8 @@ async function CreateTransactionService(param: ICreateTransactionParam) {
         coupon_id: couponId ?? undefined,
         voucher_id: voucherId ?? undefined,
         points_id: pointsId ?? undefined,
+        attend_date: attendDate,
+        payment_method: paymentMethod,
       },
     });
 

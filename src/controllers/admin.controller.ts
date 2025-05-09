@@ -3,6 +3,7 @@ import {
   GetOrganizerProfileService,
   GetCardSectionsService,
   GetUniqueLocationsService,
+  GetUserProfileService,
 } from "../services/admin.service";
 import { category } from "@prisma/client";
 
@@ -64,8 +65,32 @@ async function GetUniqueLocationsController(
   }
 }
 
+//gak kepake
+async function GetUserProfileController(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    // Get user ID from the authenticated user
+    const userId = req.user?.id;
+
+    if (!userId) throw new Error("Unauthorized - User not authenticated");
+
+    const userData = await GetUserProfileService(userId);
+
+    res.status(200).json({
+      message: "User profile retrieved successfully",
+      data: userData,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export {
   GetOrganizerProfileController,
   GetCardSectionsController,
   GetUniqueLocationsController,
+  GetUserProfileController,
 };

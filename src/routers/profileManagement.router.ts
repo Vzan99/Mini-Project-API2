@@ -6,6 +6,7 @@ import {
   ChangePasswordController,
   UpdateProfileController,
   UploadProfilePictureController,
+  GetUserProfileWithPointsController,
 } from "../controllers/profileManagement.controller";
 import ReqValidator from "../middlewares/reqValidator.middleware";
 import {
@@ -19,6 +20,12 @@ import { Multer } from "../utils/multer";
 import { TokenVerification } from "../middlewares/auth.middleware";
 
 const router = Router();
+
+router.get(
+  "/with-points",
+  TokenVerification,
+  GetUserProfileWithPointsController
+);
 
 router.post(
   "/forgot-password",

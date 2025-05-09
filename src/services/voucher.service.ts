@@ -104,4 +104,77 @@ async function CreateVoucherService(param: ICreateVoucher) {
   }
 }
 
-export { CreateVoucherService };
+async function CheckVoucherValidityService(
+  eventId: string,
+  voucherCode: string
+) {
+  try {
+    // Find the voucher by code and event ID
+    const voucher = await prisma.voucher.findFirst({
+      where: {
+        event_id: eventId,
+        voucher_code: voucherCode,
+      },
+    });
+
+    // If voucher doesn't exist
+    if (!voucher) {
+      return {
+        isValid: false,
+        message: "Voucher not found",
+      };
+    }
+
+    const now = new Date();
+
+    // Check if voucher is within valid date range
+    if (now < voucher.voucher_start_date) {
+      return {
+        isValid: false,
+        message: "Voucher is not yet active",
+        activeFrom: voucher.voucher_start_date,
+      };
+    }
+
+    if (now > voucher.voucher_end_date) {
+      return {
+        isValid: false,
+        message: "Voucher has expired",
+        expiredAt: voucher.voucher_end_date,
+      };
+    }
+
+    // Check if voucher has reached max usage
+    if (voucher.usage_amount >= voucher.max_usage) {
+      return {
+        isValid: false,
+        message: "Voucher has reached maximum usage limit",
+      };
+    }
+
+    // Fetch the event to ensure it exists
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+    });
+
+    if (!event) {
+      return {
+        isValid: false,
+        message: "Event not found",
+      };
+    }
+
+    // Voucher is valid
+    return {
+      isValid: true,
+      message: "Voucher is valid",
+      voucherId: voucher.id,
+      discountAmount: voucher.discount_amount,
+      remainingUses: voucher.max_usage - voucher.usage_amount,
+    };
+  } catch (err) {
+    throw err;
+  }
+}
+
+export { CreateVoucherService, CheckVoucherValidityService };

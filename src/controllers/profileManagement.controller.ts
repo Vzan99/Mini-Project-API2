@@ -6,6 +6,7 @@ import {
   changePasswordService,
   updateProfileService,
   uploadProfilePictureService,
+  getUserProfileWithPointsService,
 } from "../services/profileManagement.service";
 
 async function ForgotPasswordController(
@@ -143,6 +144,26 @@ async function UploadProfilePictureController(
   }
 }
 
+async function GetUserProfileWithPointsController(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const userId = req.user.id;
+
+    const result = await getUserProfileWithPointsService(userId);
+
+    res.status(200).json({
+      status: "success",
+      message: "User profile with points retrieved successfully",
+      data: result,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export {
   ForgotPasswordController,
   VerifyResetTokenController,
@@ -150,4 +171,5 @@ export {
   ChangePasswordController,
   UpdateProfileController,
   UploadProfilePictureController,
+  GetUserProfileWithPointsController,
 };

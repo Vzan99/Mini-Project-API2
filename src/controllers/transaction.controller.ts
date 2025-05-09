@@ -12,7 +12,16 @@ async function CreateTransactionController(
   next: NextFunction
 ) {
   try {
-    const data = await CreateTransactionService(req.body);
+    // Extract userId from JWT token (set by TokenVerification middleware)
+    const userId = req.user.id;
+
+    // Add userId to the request body before passing to service
+    const transactionData = {
+      ...req.body,
+      userId,
+    };
+
+    const data = await CreateTransactionService(transactionData);
 
     res.status(201).send({
       message: "Create Transaction Success!",

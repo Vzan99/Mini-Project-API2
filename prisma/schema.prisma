@@ -112,6 +112,9 @@ model Transaction {
   updated_at DateTime @default(now())
   quantity Int
   unit_price Int
+  attend_date DateTime?
+  payment_method String?
+
   //relations
   user User @relation(fields: [user_id], references: [id]) 
   coupon Coupon? @relation(fields: [coupon_id], references: [id])

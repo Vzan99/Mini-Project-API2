@@ -127,8 +127,65 @@ async function GetUniqueLocationsService() {
   }
 }
 
+async function GetUserProfileService(userId: string) {
+  try {
+    // Find the user by ID
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        first_name: true,
+        last_name: true,
+        profile_picture: true,
+        role: true,
+        points: {
+          where: {
+            is_used: false,
+            is_expired: false,
+            expires_at: { gt: new Date() },
+          },
+          select: {
+            id: true,
+            points_amount: true,
+            expires_at: true,
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Calculate total active points
+    const totalActivePoints = user.points.reduce(
+      (sum, point) => sum + point.points_amount,
+      0
+    );
+
+    return {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      firstName: user.first_name,
+      lastName: user.last_name,
+      profilePicture: user.profile_picture,
+      role: user.role,
+      points: {
+        totalActivePoints,
+        details: user.points,
+      },
+    };
+  } catch (err) {
+    throw err;
+  }
+}
+
 export {
   GetOrganizerProfileService,
   GetCardSectionsService,
   GetUniqueLocationsService,
+  GetUserProfileService,
 };

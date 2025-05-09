@@ -327,6 +327,76 @@ async function uploadProfilePictureService(param: iUploadProfilePictureParam) {
   }
 }
 
+async function getUserProfileWithPointsService(userId: string) {
+  try {
+    // Get user profile
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        first_name: true,
+        last_name: true,
+        profile_picture: true,
+        role: true,
+        created_at: true,
+        user_referral_code: true,
+      },
+    });
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Get active (unused and not expired) points
+    const activePoints = await prisma.points.findMany({
+      where: {
+        user_id: userId,
+        is_used: false,
+        is_expired: false,
+        expires_at: { gt: new Date() },
+      },
+      orderBy: {
+        expires_at: "asc",
+      },
+    });
+
+    // Calculate total active points
+    const totalActivePoints = activePoints.reduce(
+      (sum, point) => sum + point.points_amount,
+      0
+    );
+
+    // Get points history (both used and expired)
+    const pointsHistory = await prisma.points.findMany({
+      where: {
+        user_id: userId,
+        OR: [
+          { is_used: true },
+          { is_expired: true },
+          { expires_at: { lt: new Date() } },
+        ],
+      },
+      orderBy: {
+        credited_at: "desc",
+      },
+      take: 10, // Limit to recent 10 entries
+    });
+
+    return {
+      user,
+      points: {
+        activePoints,
+        totalActivePoints,
+        pointsHistory,
+      },
+    };
+  } catch (err) {
+    throw err;
+  }
+}
+
 export {
   forgotPasswordService,
   verifyResetTokenService,
@@ -334,4 +404,5 @@ export {
   changePasswordService,
   updateProfileService,
   uploadProfilePictureService,
+  getUserProfileWithPointsService,
 };

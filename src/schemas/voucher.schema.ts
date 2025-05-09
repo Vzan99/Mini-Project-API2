@@ -30,3 +30,8 @@ export const CreateVoucherSchema = z
     message: "Voucher end date must be after start date",
     path: ["voucherEndDate"],
   });
+
+export const CheckVoucherSchema = z.object({
+  eventId: z.string().uuid({ message: "Invalid event ID" }),
+  voucherCode: z.string().min(1, { message: "Voucher code is required" }),
+});

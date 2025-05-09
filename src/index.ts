@@ -11,6 +11,7 @@ import AuthRouter from "./routers/auth.router";
 import Test from "./routers/testdata.router";
 import AdminRouter from "./routers/admin.router";
 import ProfileRouter from "./routers/profileManagement.router";
+import CouponRouter from "./routers/coupon.router";
 
 import { AutoExpireTransactionTask } from "./utils/cron/expire-transaction-task";
 import { AutoCancelTransactionTask } from "./utils/cron/cancel-transaction-task";
@@ -45,6 +46,9 @@ app.use("/events", EventRouter);
 
 //Vouchers
 app.use("/vouchers", VoucherRouter);
+
+//Coupons
+app.use("/coupon", CouponRouter);
 
 //Transactions
 app.use("/transactions", TransactionRouter);

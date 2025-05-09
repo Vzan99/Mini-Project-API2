@@ -17,6 +17,11 @@ import handlebars from "handlebars";
 async function CreateTransactionService(param: ICreateTransactionParam) {
   const { userId, eventId, quantity, couponId, voucherId, pointsId } = param;
 
+  // Check that user doesn't try to use both voucher and coupon
+  if (couponId && voucherId) {
+    throw new Error("You can only use either a voucher or a coupon, not both");
+  }
+
   // 1. Fetch Event & User
   const [event, user] = await Promise.all([
     prisma.event.findUnique({ where: { id: eventId } }),

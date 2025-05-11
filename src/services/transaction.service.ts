@@ -249,11 +249,11 @@ async function PaymentTransactionService({
 //Event Organizer Action Confirm or Reject
 async function EOActionTransactionService(param: IEOActionTransactionParam) {
   try {
-    const { transaction_id, user_id, action } = param;
+    const { id, user_id, action } = param;
 
     // Fetch the transaction along with its event to ensure the EO is authorized to act
     const transaction = await prisma.transaction.findUnique({
-      where: { id: transaction_id },
+      where: { id: id },
       include: {
         event: true,
         user: {
@@ -329,7 +329,7 @@ async function EOActionTransactionService(param: IEOActionTransactionParam) {
 
         // e) Update the transaction status
         const updatedTransaction = await txClient.transaction.update({
-          where: { id: transaction_id },
+          where: { id: id },
           data: {
             status: updatedStatus,
             updated_at: new Date(),
@@ -367,7 +367,7 @@ async function EOActionTransactionService(param: IEOActionTransactionParam) {
       return await prisma.$transaction(async (txClient) => {
         // Update the transaction status
         const updatedTransaction = await txClient.transaction.update({
-          where: { id: transaction_id },
+          where: { id: id },
           data: {
             status: updatedStatus,
             updated_at: new Date(),
@@ -385,7 +385,7 @@ async function EOActionTransactionService(param: IEOActionTransactionParam) {
               ticket_code: ticketCode,
               event_id: transaction.event_id,
               user_id: transaction.user_id,
-              transaction_id: transaction_id,
+              transaction_id: id,
             },
           });
 

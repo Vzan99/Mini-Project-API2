@@ -109,15 +109,15 @@ async function CreateVoucherService(param: ICreateVoucher) {
 }
 
 async function CheckVoucherValidityService(
-  eventId: string,
-  voucherCode: string
+  event_id: string,
+  voucher_code: string
 ) {
   try {
     // Find the voucher by code and event ID
     const voucher = await prisma.voucher.findFirst({
       where: {
-        event_id: eventId,
-        voucher_code: voucherCode,
+        event_id: event_id,
+        voucher_code: voucher_code,
       },
     });
 
@@ -158,7 +158,7 @@ async function CheckVoucherValidityService(
 
     // Fetch the event to ensure it exists
     const event = await prisma.event.findUnique({
-      where: { id: eventId },
+      where: { id: event_id },
     });
 
     if (!event) {

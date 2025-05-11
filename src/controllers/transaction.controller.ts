@@ -78,7 +78,7 @@ async function EOActionTransactionController(
   next: NextFunction
 ) {
   try {
-    const { transaction_id } = req.params;
+    const { id } = req.params;
     const { action } = req.body;
 
     // Get the user ID from the authenticated user
@@ -86,7 +86,7 @@ async function EOActionTransactionController(
 
     // Call the service with the correct parameter name
     const updatedTransaction = await EOActionTransactionService({
-      transaction_id: String(transaction_id),
+      id: String(id),
       user_id, // This should match the parameter name in your service
       action,
     });

@@ -78,30 +78,57 @@ async function GetCardSectionsService(categoryFilter?: category) {
       ? [categoryFilter]
       : Object.values(category);
 
-    const sections = await Promise.all(
-      categoriesToFetch.map(async (categoryValue) => {
-        const events = await prisma.event.findMany({
-          where: {
-            category: categoryValue,
-            start_date: { gt: now },
-          },
-          orderBy: { start_date: "asc" },
-          take: 3,
-          select: {
-            id: true,
-            name: true,
-            event_image: true,
-            location: true,
-            start_date: true,
-            end_date: true,
-          },
-        });
+    // If a specific category is requested, just return events for that category
+    if (categoryFilter) {
+      const events = await prisma.event.findMany({
+        where: {
+          category: categoryFilter,
+          start_date: { gt: now },
+        },
+        orderBy: { start_date: "asc" },
+        take: 3,
+        select: {
+          id: true,
+          name: true,
+          event_image: true,
+          location: true,
+          start_date: true,
+          end_date: true,
+        },
+      });
 
-        return { category: categoryValue, events };
-      })
-    );
+      // Return just the array of events
+      return events;
+    }
+    // If no category filter, return events grouped by category
+    else {
+      const sectionsObject: { [key: string]: any[] } = {};
 
-    return sections;
+      await Promise.all(
+        categoriesToFetch.map(async (categoryValue) => {
+          const events = await prisma.event.findMany({
+            where: {
+              category: categoryValue,
+              start_date: { gt: now },
+            },
+            orderBy: { start_date: "asc" },
+            take: 3,
+            select: {
+              id: true,
+              name: true,
+              event_image: true,
+              location: true,
+              start_date: true,
+              end_date: true,
+            },
+          });
+
+          sectionsObject[categoryValue] = events;
+        })
+      );
+
+      return sectionsObject;
+    }
   } catch (err) {
     throw err;
   }

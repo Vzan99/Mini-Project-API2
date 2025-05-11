@@ -541,6 +541,62 @@ async function GetUserTicketsService(userId: string) {
   }
 }
 
+async function GetTransactionByIdService(
+  transactionId: string,
+  userId: string
+) {
+  try {
+    // Find the transaction with the given ID
+    const transaction = await prisma.transaction.findUnique({
+      where: { id: transactionId },
+      include: {
+        event: {
+          select: {
+            id: true,
+            name: true,
+            location: true,
+            start_date: true,
+            end_date: true,
+            event_image: true,
+            organizer_id: true,
+            organizer: {
+              select: {
+                username: true,
+                email: true,
+              },
+            },
+          },
+        },
+        user: {
+          select: {
+            id: true,
+            username: true,
+            email: true,
+          },
+        },
+        tickets: true,
+      },
+    });
+
+    if (!transaction) {
+      throw new Error("Transaction not found");
+    }
+
+    // Check if the user is authorized to view this transaction
+    // Either the user owns the transaction or is the event organizer
+    if (
+      transaction.user_id !== userId &&
+      transaction.event.organizer_id !== userId
+    ) {
+      throw new Error("You are not authorized to view this transaction");
+    }
+
+    return transaction;
+  } catch (err) {
+    throw err;
+  }
+}
+
 export {
   CreateTransactionService,
   PaymentTransactionService,
@@ -548,4 +604,5 @@ export {
   AutoExpireTransactionService,
   AutoCancelTransactionService,
   GetUserTicketsService,
+  GetTransactionByIdService,
 };

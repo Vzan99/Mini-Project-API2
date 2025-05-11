@@ -4,6 +4,7 @@ import {
   PaymentTransactionService,
   EOActionTransactionService,
   GetUserTicketsService,
+  GetTransactionByIdService,
 } from "../services/transaction.service";
 
 async function CreateTransactionController(
@@ -43,7 +44,7 @@ async function PaymentTransactionController(
     const { id: transactionId } = req.params;
     // const userId = req.user?.id; // Assuming you're attaching the authenticated user to req.user
     // const { userId } = req.body; // Ngambil dari body dulu, karena belum ada authentication
-    const userId = String(req.body.userId);
+    const userId = req.user?.id;
 
     if (!req.file) {
       return next(new Error("Payment proof image is required"));
@@ -123,9 +124,30 @@ async function GetUserTicketsController(
   }
 }
 
+async function GetTransactionByIdController(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const { transactionId } = req.params;
+    const userId = req.user.id;
+
+    const transaction = await GetTransactionByIdService(transactionId, userId);
+
+    res.status(200).json({
+      message: "Transaction retrieved successfully",
+      data: transaction,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export {
   CreateTransactionController,
   PaymentTransactionController,
   EOActionTransactionController,
   GetUserTicketsController,
+  GetTransactionByIdController,
 };

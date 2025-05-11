@@ -39,3 +39,7 @@ export const QRISPaymentSchema = z.object({
   userId: z.string().uuid("Invalid user ID format"),
   amount: z.number().positive("Amount must be positive"),
 });
+
+export const TransactionIdParamSchema = z.object({
+  transactionId: z.string().uuid("Invalid transaction ID format"),
+});

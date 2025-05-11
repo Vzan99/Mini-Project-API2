@@ -13,13 +13,13 @@ async function GetOrganizerProfileController(
   next: NextFunction
 ) {
   try {
-    const organizerId = String(req.params.id);
+    const organizer_id = String(req.params.id);
 
     // if (isNaN(organizerId)) {
     //   throw new Error("Invalid organizer ID");
     // }
 
-    const profile = await GetOrganizerProfileService(organizerId);
+    const profile = await GetOrganizerProfileService(organizer_id);
 
     res.status(200).json({
       message: "Get organizer profile success!",
@@ -73,11 +73,11 @@ async function GetUserProfileController(
 ) {
   try {
     // Get user ID from the authenticated user
-    const userId = req.user?.id;
+    const user_id = req.user?.id;
 
-    if (!userId) throw new Error("Unauthorized - User not authenticated");
+    if (!user_id) throw new Error("Unauthorized - User not authenticated");
 
-    const userData = await GetUserProfileService(userId);
+    const userData = await GetUserProfileService(user_id);
 
     res.status(200).json({
       message: "User profile retrieved successfully",

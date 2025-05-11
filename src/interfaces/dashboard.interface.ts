@@ -2,7 +2,7 @@ import { transaction_status, category } from "@prisma/client";
 
 // Filter waktu dengan detail
 export interface IDateFilterParams {
-  filterType?: "day" | "week" | "month" | "year";
+  filter_type?: "day" | "week" | "month" | "year";
   year?: number;
   month?: number;
   day?: number;
@@ -10,22 +10,22 @@ export interface IDateFilterParams {
 
 // Statistik event
 export interface IEventStatistics {
-  totalEvents: number;
-  totalAttendees: number;
-  totalRevenue: number;
-  eventsByCategory: Array<{
+  total_events: number;
+  total_attendees: number;
+  total_revenue: number;
+  events_by_category: Array<{
     category: string;
     count: number;
   }>;
-  recentTransactions: Array<{
+  recent_transactions: Array<{
     id: string;
-    eventName: string;
-    customerName: string;
+    event_name: string;
+    customer_name: string;
     amount: number;
     status: transaction_status;
     date: Date;
   }>;
-  timeSeriesData: Array<{
+  time_series_data: Array<{
     date: string;
     events: number;
     attendees: number;
@@ -82,7 +82,7 @@ export interface IEventUpdateData {
 }
 
 export interface IUpdateEventImageParam {
-  organizerId: string;
-  eventId: string;
+  organizer_id: string;
+  event_id: string;
   file: Express.Multer.File;
 }

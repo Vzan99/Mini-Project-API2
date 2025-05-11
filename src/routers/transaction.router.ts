@@ -42,7 +42,7 @@ router.get(
 router.post(
   "/:id/action",
   TokenVerification,
-  ParamValidator(EOActionSchema.pick({ transactionId: true })), // Validate transactionId param
+  ParamValidator(EOActionSchema.pick({ id: true })), // Validate transactionId param
   ReqValidator(EOActionSchema.pick({ action: true })), // Validate action in body
   EOActionTransactionController
 );

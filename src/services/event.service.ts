@@ -20,21 +20,21 @@ async function CreateEventService(param: ICreateEventParam) {
     const dup = await prisma.event.findFirst({
       where: {
         name: param.name,
-        start_date: param.startDate,
-        end_date: param.endDate,
+        start_date: param.start_date,
+        end_date: param.end_date,
         location: param.location,
       },
     });
     if (dup) throw new Error("An event with the same details already exists.");
 
     // 3) Business validations
-    if (param.endDate <= param.startDate) {
+    if (param.end_date <= param.start_date) {
       throw new Error("End date must be after start date.");
     }
     if (param.price < 0) {
       throw new Error("Price must be zero or greater.");
     }
-    if (param.totalSeats <= 0) {
+    if (param.total_seats <= 0) {
       throw new Error("Total seats must be greater than zero.");
     }
 
@@ -42,16 +42,16 @@ async function CreateEventService(param: ICreateEventParam) {
     const event = await prisma.event.create({
       data: {
         name: param.name,
-        start_date: param.startDate,
-        end_date: param.endDate,
+        start_date: param.start_date,
+        end_date: param.end_date,
         description: param.description,
         event_image: fileName, // full URL or null
         location: param.location,
         price: param.price,
-        total_seats: param.totalSeats,
-        remaining_seats: param.totalSeats,
+        total_seats: param.total_seats,
+        remaining_seats: param.total_seats,
         category: param.category,
-        organizer_id: param.organizerId, // ID dari user yang terautentikasi
+        organizer_id: param.organizer_id, // ID dari user yang terautentikasi
       },
     });
 
@@ -146,54 +146,54 @@ async function FilterEventsService(filters: FilterParams) {
       };
     }
 
-    // Price filters - handle freeOnly first
-    if (filters.freeOnly) {
+    // Price filters - handle free_only first
+    if (filters.free_only) {
       whereClause.price = 0;
     } else if (
-      filters.minPrice !== undefined ||
-      filters.maxPrice !== undefined
+      filters.min_price !== undefined ||
+      filters.max_price !== undefined
     ) {
       whereClause.price = {};
-      if (filters.minPrice !== undefined) {
-        whereClause.price.gte = filters.minPrice;
+      if (filters.min_price !== undefined) {
+        whereClause.price.gte = filters.min_price;
       }
-      if (filters.maxPrice !== undefined) {
-        whereClause.price.lte = filters.maxPrice;
+      if (filters.max_price !== undefined) {
+        whereClause.price.lte = filters.max_price;
       }
     }
 
     // Available seats filter
-    if (filters.availableSeatsOnly) {
+    if (filters.available_seats_only) {
       whereClause.remaining_seats = { gt: 0 };
     }
 
     // Handle specific date filter (new)
-    if (filters.specificDate) {
+    if (filters.specific_date) {
       // Find events where the specific date falls within the event's date range
       // (start_date <= specificDate <= end_date)
       whereClause.AND = [
-        { start_date: { lte: filters.specificDate } },
-        { end_date: { gte: filters.specificDate } },
+        { start_date: { lte: filters.specific_date } },
+        { end_date: { gte: filters.specific_date } },
       ];
     } else {
       // Use existing date range filters only if specificDate is not provided
-      if (filters.startDate) {
-        whereClause.start_date = { gte: filters.startDate };
+      if (filters.start_date) {
+        whereClause.start_date = { gte: filters.start_date };
       } else {
         whereClause.start_date = { gte: now };
       }
 
-      if (filters.endDate) {
+      if (filters.end_date) {
         whereClause.end_date = {
           ...(whereClause.end_date || {}),
-          lte: filters.endDate,
+          lte: filters.end_date,
         };
       }
     }
 
     // Sorting by field (e.g., name, price, start_date)
-    const sortBy = filters.sortBy || "start_date"; // Default sort by start_date
-    const sortOrder = filters.sortOrder || "asc"; // Default sort order is ascending
+    const sortBy = filters.sort_by || "start_date"; // Default sort by start_date
+    const sortOrder = filters.sort_order || "asc"; // Default sort order is ascending
 
     // Validate sortBy field
     const validSortFields = ["name", "price", "start_date", "location"];

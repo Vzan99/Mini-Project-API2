@@ -14,12 +14,12 @@ async function CreateTransactionController(
 ) {
   try {
     // Extract userId from JWT token (set by TokenVerification middleware)
-    const userId = req.user.id;
+    const user_id = req.user.id;
 
     // Add userId to the request body before passing to service
     const transactionData = {
       ...req.body,
-      userId,
+      user_id,
     };
 
     const data = await CreateTransactionService(transactionData);
@@ -41,22 +41,22 @@ async function PaymentTransactionController(
   next: NextFunction
 ) {
   try {
-    const { id: transactionId } = req.params;
+    const { id } = req.params;
     // const userId = req.user?.id; // Assuming you're attaching the authenticated user to req.user
     // const { userId } = req.body; // Ngambil dari body dulu, karena belum ada authentication
-    const userId = req.user?.id;
+    const user_id = req.user?.id;
 
     if (!req.file) {
       return next(new Error("Payment proof image is required"));
     }
 
-    if (!userId) {
+    if (!user_id) {
       return next(new Error("Unauthorized: User ID missing"));
     }
 
     const updatedTransaction = await PaymentTransactionService({
-      transactionId: String(transactionId),
-      userId,
+      id: String(id),
+      user_id,
       file: req.file,
     });
 
@@ -78,16 +78,16 @@ async function EOActionTransactionController(
   next: NextFunction
 ) {
   try {
-    const { transactionId } = req.params;
+    const { transaction_id } = req.params;
     const { action } = req.body;
 
     // Get the user ID from the authenticated user
-    const userId = req.user.id;
+    const user_id = req.user.id;
 
     // Call the service with the correct parameter name
     const updatedTransaction = await EOActionTransactionService({
-      transactionId: String(transactionId),
-      userId, // This should match the parameter name in your service
+      transaction_id: String(transaction_id),
+      user_id, // This should match the parameter name in your service
       action,
     });
 
@@ -109,10 +109,10 @@ async function GetUserTicketsController(
 ) {
   try {
     // Get the user ID from the authenticated user
-    const userId = req.user.id;
+    const user_id = req.user.id;
 
     // Call the service to get the user's tickets
-    const tickets = await GetUserTicketsService(userId);
+    const tickets = await GetUserTicketsService(user_id);
 
     // Send response with the tickets data
     res.status(200).json({
@@ -130,10 +130,10 @@ async function GetTransactionByIdController(
   next: NextFunction
 ) {
   try {
-    const { transactionId } = req.params;
+    const { id } = req.params;
     const userId = req.user.id;
 
-    const transaction = await GetTransactionByIdService(transactionId, userId);
+    const transaction = await GetTransactionByIdService(id, userId);
 
     res.status(200).json({
       message: "Transaction retrieved successfully",

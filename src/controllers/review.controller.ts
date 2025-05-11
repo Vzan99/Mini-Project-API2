@@ -7,8 +7,13 @@ async function CreateReviewController(
   next: NextFunction
 ) {
   try {
-    const { userId, eventId, rating, review } = req.body;
-    const data = await CreateReviewService({ userId, eventId, rating, review });
+    const { user_id, event_id, rating, review } = req.body;
+    const data = await CreateReviewService({
+      user_id,
+      event_id,
+      rating,
+      review,
+    });
     res.status(201).json({ message: "Review created", data });
   } catch (err) {
     next(err);

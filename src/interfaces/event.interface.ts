@@ -2,15 +2,15 @@ import { category } from "@prisma/client";
 
 export interface ICreateEventParam {
   name: string;
-  startDate: Date;
-  endDate: Date;
+  start_date: Date;
+  end_date: Date;
   description: string;
   file?: Express.Multer.File;
   location: string;
   price: number;
-  totalSeats: number;
+  total_seats: number;
   category: category;
-  organizerId: string;
+  organizer_id: string;
 }
 
 //hanya untuk exercise upload foto

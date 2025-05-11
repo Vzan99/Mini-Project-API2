@@ -26,18 +26,18 @@ async function CheckVoucherValidityController(
   next: NextFunction
 ) {
   try {
-    const { eventId, voucherCode } = req.query;
+    const { event_id, voucher_code } = req.query;
 
     if (
-      !eventId ||
-      !voucherCode ||
-      typeof eventId !== "string" ||
-      typeof voucherCode !== "string"
+      !event_id ||
+      !voucher_code ||
+      typeof event_id !== "string" ||
+      typeof voucher_code !== "string"
     ) {
       throw new Error("Event ID and voucher code are required");
     }
 
-    const result = await CheckVoucherValidityService(eventId, voucherCode);
+    const result = await CheckVoucherValidityService(event_id, voucher_code);
 
     res.status(200).json({
       message: result.message,

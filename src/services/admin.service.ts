@@ -1,12 +1,11 @@
 import prisma from "../lib/prisma";
-import { FilterParams } from "../interfaces/filter.interface";
 import { category } from "@prisma/client";
 
-async function GetOrganizerProfileService(organizerId: string) {
+async function GetOrganizerProfileService(organizer_id: string) {
   try {
     // Ensure the user is actually an event_organizer and get their profile data
     const user = await prisma.user.findUnique({
-      where: { id: organizerId },
+      where: { id: organizer_id },
       select: {
         role: true,
         username: true,
@@ -22,7 +21,7 @@ async function GetOrganizerProfileService(organizerId: string) {
 
     // Fetch all events created by this organizer with more details
     const events = await prisma.event.findMany({
-      where: { organizer_id: organizerId },
+      where: { organizer_id: organizer_id },
       include: {
         review: {
           include: {
@@ -35,34 +34,34 @@ async function GetOrganizerProfileService(organizerId: string) {
     // Flatten all reviews
     const allReviews = events.flatMap((event) => event.review);
 
-    const averageRating =
+    const average_rating =
       allReviews.length > 0
         ? allReviews.reduce((sum, r) => sum + r.rating, 0) / allReviews.length
         : 0;
 
     return {
       organizer: {
-        id: organizerId,
+        id: organizer_id,
         username: user.username,
-        firstName: user.first_name,
-        lastName: user.last_name,
-        profilePicture: user.profile_picture,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        profile_picture: user.profile_picture,
       },
-      averageRating,
-      totalReviews: allReviews.length,
+      average_rating,
+      total_reviews: allReviews.length,
       reviews: allReviews,
       events: events.map((e) => ({
         id: e.id,
         name: e.name,
-        startDate: e.start_date,
-        endDate: e.end_date,
+        start_date: e.start_date,
+        end_date: e.end_date,
         location: e.location,
         price: e.price,
-        totalSeats: e.total_seats,
-        remainingSeats: e.remaining_seats,
+        total_seats: e.total_seats,
+        remaining_seats: e.remaining_seats,
         category: e.category,
-        eventImage: e.event_image,
-        totalReviews: e.review.length,
+        event_image: e.event_image,
+        total_reviews: e.review.length,
       })),
     };
   } catch (err) {
@@ -70,38 +69,65 @@ async function GetOrganizerProfileService(organizerId: string) {
   }
 }
 
-async function GetCardSectionsService(categoryFilter?: category) {
+async function GetCardSectionsService(category_filter?: category) {
   try {
     const now = new Date();
 
-    const categoriesToFetch = categoryFilter
-      ? [categoryFilter]
+    const categoriesToFetch = category_filter
+      ? [category_filter]
       : Object.values(category);
 
-    const sections = await Promise.all(
-      categoriesToFetch.map(async (categoryValue) => {
-        const events = await prisma.event.findMany({
-          where: {
-            category: categoryValue,
-            start_date: { gt: now },
-          },
-          orderBy: { start_date: "asc" },
-          take: 3,
-          select: {
-            id: true,
-            name: true,
-            event_image: true,
-            location: true,
-            start_date: true,
-            end_date: true,
-          },
-        });
+    // If a specific category is requested, just return events for that category
+    if (category_filter) {
+      const events = await prisma.event.findMany({
+        where: {
+          category: category_filter,
+          start_date: { gt: now },
+        },
+        orderBy: { start_date: "asc" },
+        take: 3,
+        select: {
+          id: true,
+          name: true,
+          event_image: true,
+          location: true,
+          start_date: true,
+          end_date: true,
+        },
+      });
 
-        return { category: categoryValue, events };
-      })
-    );
+      // Return just the array of events
+      return events;
+    }
+    // If no category filter, return events grouped by category
+    else {
+      const sectionsObject: { [key: string]: any[] } = {};
 
-    return sections;
+      await Promise.all(
+        categoriesToFetch.map(async (categoryValue) => {
+          const events = await prisma.event.findMany({
+            where: {
+              category: categoryValue,
+              start_date: { gt: now },
+            },
+            orderBy: { start_date: "asc" },
+            take: 3,
+            select: {
+              id: true,
+              name: true,
+              event_image: true,
+              location: true,
+              start_date: true,
+              end_date: true,
+            },
+          });
+
+          sectionsObject[categoryValue] = events;
+        })
+      );
+
+      return sectionsObject;
+    }
   } catch (err) {
     throw err;
   }
@@ -127,11 +153,11 @@ async function GetUniqueLocationsService() {
   }
 }
 
-async function GetUserProfileService(userId: string) {
+async function GetUserProfileService(user_id: string) {
   try {
     // Find the user by ID
     const user = await prisma.user.findUnique({
-      where: { id: userId },
+      where: { id: user_id },
       select: {
         id: true,
         username: true,
@@ -160,7 +186,7 @@ async function GetUserProfileService(userId: string) {
     }
 
     // Calculate total active points
-    const totalActivePoints = user.points.reduce(
+    const total_active_points = user.points.reduce(
       (sum, point) => sum + point.points_amount,
       0
     );
@@ -169,12 +195,12 @@ async function GetUserProfileService(userId: string) {
       id: user.id,
       username: user.username,
       email: user.email,
-      firstName: user.first_name,
-      lastName: user.last_name,
-      profilePicture: user.profile_picture,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      profile_picture: user.profile_picture,
       role: user.role,
       points: {
-        totalActivePoints,
+        total_active_points,
         details: user.points,
       },
     };

@@ -39,14 +39,14 @@ async function GetEventStatisticsController(
   next: NextFunction
 ) {
   try {
-    const organizerId = req.user.id;
-    const { filterType, year, month, day } = req.query;
+    const organizer_id = req.user.id;
+    const { filter_type, year, month, day } = req.query;
 
     // Build filter object from query parameters
     const timeFilter: IDateFilterParams = {};
 
-    if (filterType) {
-      timeFilter.filterType = filterType as "day" | "week" | "month" | "year";
+    if (filter_type) {
+      timeFilter.filter_type = filter_type as "day" | "week" | "month" | "year";
     }
 
     if (year) timeFilter.year = parseInt(year as string);
@@ -54,7 +54,7 @@ async function GetEventStatisticsController(
     if (day) timeFilter.day = parseInt(day as string);
 
     const statistics = await GetEventStatisticsService(
-      organizerId,
+      organizer_id,
       Object.keys(timeFilter).length > 0 ? timeFilter : undefined
     );
 
@@ -76,8 +76,8 @@ async function GetTransactionsController(
   next: NextFunction
 ) {
   try {
-    const organizerId = req.user.id;
-    const transactions = await GetTransactionService(organizerId);
+    const organizer_id = req.user.id;
+    const transactions = await GetTransactionService(organizer_id);
 
     res.status(200).json({
       message: "Transactions retrieved successfully",
@@ -97,10 +97,10 @@ async function GetEventDetailsController(
   next: NextFunction
 ) {
   try {
-    const organizerId = req.user.id;
-    const eventId = req.params.id;
+    const organizer_id = req.user.id;
+    const event_id = req.params.id;
 
-    const eventDetails = await GetEventDetailsService(eventId, organizerId);
+    const eventDetails = await GetEventDetailsService(event_id, organizer_id);
 
     res.status(200).json({
       message: "Event details retrieved successfully",
@@ -120,14 +120,14 @@ async function UpdateEventController(
   next: NextFunction
 ) {
   try {
-    const organizerId = req.user.id;
-    const eventId = req.params.id;
-    const updateData = req.body;
+    const organizer_id = req.user.id;
+    const event_id = req.params.id;
+    const update_data = req.body;
 
     const updatedEvent = await UpdateEventService(
-      eventId,
-      organizerId,
-      updateData
+      event_id,
+      organizer_id,
+      update_data
     );
 
     res.status(200).json({
@@ -145,8 +145,8 @@ async function UpdateEventImageController(
   next: NextFunction
 ) {
   try {
-    const organizerId = req.user.id;
-    const eventId = req.params.id;
+    const organizer_id = req.user.id;
+    const event_id = req.params.id;
     const file = req.file;
 
     if (!file) {
@@ -154,8 +154,8 @@ async function UpdateEventImageController(
     }
 
     const updatedEvent = await UpdateEventImageService({
-      organizerId,
-      eventId,
+      organizer_id,
+      event_id,
       file,
     });
 

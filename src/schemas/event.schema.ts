@@ -8,7 +8,7 @@ export const createEventSchema = z
       .min(1, "Event name is required")
       .max(100, "Event name is too long"),
 
-    startDate: z.coerce
+    start_date: z.coerce
       .date({
         errorMap: () => ({ message: "Start date must be a valid date" }),
       })
@@ -16,7 +16,7 @@ export const createEventSchema = z
         message: "Start date must be in the future",
       }),
 
-    endDate: z.coerce.date({
+    end_date: z.coerce.date({
       errorMap: () => ({ message: "End date must be a valid date" }),
     }),
 
@@ -37,7 +37,7 @@ export const createEventSchema = z
       .int("Price must be an integer")
       .min(0, "Price cannot be negative"),
 
-    totalSeats: z.coerce
+    total_seats: z.coerce
       .number({
         errorMap: () => ({ message: "Total seats must be a number" }),
       })
@@ -48,7 +48,7 @@ export const createEventSchema = z
       errorMap: () => ({ message: "Invalid event category" }),
     }),
   })
-  .refine((data) => data.endDate > data.startDate, {
+  .refine((data) => data.end_date > data.start_date, {
     message: "End date must come after start date",
     path: ["endDate"],
   });
@@ -72,38 +72,38 @@ export const filterEventSchema = z
       })
       .optional(),
     location: z.string().optional(),
-    minPrice: z.coerce
+    min_price: z.coerce
       .number()
       .min(0, "Minimum price cannot be negative")
       .optional(),
-    maxPrice: z.coerce
+    max_price: z.coerce
       .number()
       .min(0, "Maximum price cannot be negative")
       .optional(),
-    startDate: z.coerce
+    start_date: z.coerce
       .date({
         errorMap: () => ({ message: "Start date must be a valid date" }),
       })
       .optional()
       .default(() => new Date()),
-    endDate: z.coerce.date().optional(),
-    availableSeatsOnly: z.boolean().optional().default(false),
-    freeOnly: z.boolean().optional().default(false),
-    specificDate: z.coerce.date().optional(),
-    sortBy: z
+    end_date: z.coerce.date().optional(),
+    available_seats_only: z.boolean().optional().default(false),
+    free_only: z.boolean().optional().default(false),
+    specific_date: z.coerce.date().optional(),
+    sort_by: z
       .enum(["name", "price", "start_date", "location", "created_at"], {
         errorMap: () => ({ message: "Invalid sort field" }),
       })
       .optional()
       .default("start_date"),
-    sortOrder: z.enum(["asc", "desc"]).optional().default("asc"),
+    sort_order: z.enum(["asc", "desc"]).optional().default("asc"),
     page: z.coerce.number().positive().optional().default(1),
     limit: z.coerce.number().positive().optional().default(10),
   })
   .refine(
     (data) => {
-      if (data.minPrice !== undefined && data.maxPrice !== undefined) {
-        return data.minPrice <= data.maxPrice;
+      if (data.min_price !== undefined && data.max_price !== undefined) {
+        return data.min_price <= data.max_price;
       }
       return true;
     },
@@ -114,8 +114,8 @@ export const filterEventSchema = z
   )
   .refine(
     (data) => {
-      if (data.startDate && data.endDate) {
-        return data.startDate <= data.endDate;
+      if (data.start_date && data.end_date) {
+        return data.start_date <= data.end_date;
       }
       return true;
     },

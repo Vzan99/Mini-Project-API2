@@ -16,25 +16,25 @@ import handlebars from "handlebars";
 //Create Transaction (Click "BuyTicket" Button from event details page)
 async function CreateTransactionService(param: ICreateTransactionParam) {
   const {
-    userId,
-    eventId,
+    user_id,
+    event_id,
     quantity,
-    attendDate, // This is already a Date object
-    paymentMethod,
-    couponId,
-    voucherId,
-    pointsId,
+    attend_date, // This is already a Date object
+    payment_method,
+    coupon_id,
+    voucher_id,
+    points_id,
   } = param;
 
   // Check that user doesn't try to use both voucher and coupon
-  if (couponId && voucherId) {
+  if (coupon_id && voucher_id) {
     throw new Error("You can only use either a voucher or a coupon, not both");
   }
 
   // 1. Fetch Event & User
   const [event, user] = await Promise.all([
-    prisma.event.findUnique({ where: { id: eventId } }),
-    prisma.user.findUnique({ where: { id: userId } }),
+    prisma.event.findUnique({ where: { id: event_id } }),
+    prisma.user.findUnique({ where: { id: user_id } }),
   ]);
   if (!event) throw new Error("Event not found");
   if (!user) throw new Error("User not found");
@@ -48,7 +48,7 @@ async function CreateTransactionService(param: ICreateTransactionParam) {
   const eventStartDate = new Date(event.start_date);
   const eventEndDate = new Date(event.end_date);
 
-  if (attendDate < eventStartDate || attendDate > eventEndDate) {
+  if (attend_date < eventStartDate || attend_date > eventEndDate) {
     throw new Error("Attend date must be within event start and end dates");
   }
 
@@ -60,11 +60,11 @@ async function CreateTransactionService(param: ICreateTransactionParam) {
   let pointsDiscount = 0;
 
   // 3a. Coupon
-  if (couponId) {
-    const coupon = await prisma.coupon.findUnique({ where: { id: couponId } });
+  if (coupon_id) {
+    const coupon = await prisma.coupon.findUnique({ where: { id: coupon_id } });
     if (
       !coupon ||
-      coupon.user_id !== userId ||
+      coupon.user_id !== user_id ||
       now < coupon.coupon_start_date ||
       now > coupon.coupon_end_date ||
       coupon.use_count >= coupon.max_usage
@@ -75,13 +75,13 @@ async function CreateTransactionService(param: ICreateTransactionParam) {
   }
 
   // 3b. Voucher
-  if (voucherId) {
+  if (voucher_id) {
     const voucher = await prisma.voucher.findUnique({
-      where: { id: voucherId },
+      where: { id: voucher_id },
     });
     if (
       !voucher ||
-      voucher.event_id !== eventId ||
+      voucher.event_id !== event_id ||
       now < voucher.voucher_start_date ||
       now > voucher.voucher_end_date ||
       voucher.usage_amount >= voucher.max_usage
@@ -92,11 +92,11 @@ async function CreateTransactionService(param: ICreateTransactionParam) {
   }
 
   // 3c. Points
-  if (pointsId) {
-    const points = await prisma.points.findUnique({ where: { id: pointsId } });
+  if (points_id) {
+    const points = await prisma.points.findUnique({ where: { id: points_id } });
     if (
       !points ||
-      points.user_id !== userId ||
+      points.user_id !== user_id ||
       points.is_used ||
       points.is_expired ||
       now > points.expires_at
@@ -127,48 +127,48 @@ async function CreateTransactionService(param: ICreateTransactionParam) {
     // 6a. Create transaction
     const transaction = await tx.transaction.create({
       data: {
-        user_id: userId,
-        event_id: eventId,
+        user_id,
+        event_id,
         quantity,
         unit_price: event.price,
         total_pay_amount: finalAmount,
         payment_proof: null,
         status,
         expires_at: expiresAt,
-        coupon_id: couponId ?? undefined,
-        voucher_id: voucherId ?? undefined,
-        points_id: pointsId ?? undefined,
-        attend_date: attendDate,
-        payment_method: paymentMethod,
+        coupon_id: coupon_id ?? undefined,
+        voucher_id: voucher_id ?? undefined,
+        points_id: points_id ?? undefined,
+        attend_date: attend_date,
+        payment_method: payment_method,
       },
     });
 
     // 6b. Decrement seats
     await tx.event.update({
-      where: { id: eventId },
+      where: { id: event_id },
       data: { remaining_seats: event.remaining_seats - quantity },
     });
 
     // 6c. Increment coupon usage
-    if (couponId) {
+    if (coupon_id) {
       await tx.coupon.update({
-        where: { id: couponId },
+        where: { id: coupon_id },
         data: { use_count: { increment: 1 } },
       });
     }
 
     // 6d. Increment voucher usage
-    if (voucherId) {
+    if (voucher_id) {
       await tx.voucher.update({
-        where: { id: voucherId },
+        where: { id: voucher_id },
         data: { usage_amount: { increment: 1 } },
       });
     }
 
     // 6e. Mark points used
-    if (pointsId) {
+    if (points_id) {
       await tx.points.update({
-        where: { id: pointsId },
+        where: { id: points_id },
         data: {
           is_used: true,
         },
@@ -183,15 +183,15 @@ async function CreateTransactionService(param: ICreateTransactionParam) {
 
 //Customer upload Payment Proof, and then change the status to "waiting_for_admin_confirmation"
 async function PaymentTransactionService({
-  transactionId,
-  userId,
+  id,
+  user_id,
   file,
 }: IPaymentTransactionParam) {
   let url = "";
   try {
     // 1. Get the transaction
     const tx = await prisma.transaction.findUnique({
-      where: { id: transactionId },
+      where: { id: id },
     });
 
     if (!tx) {
@@ -199,7 +199,7 @@ async function PaymentTransactionService({
     }
 
     // 2. Check ownership
-    if (tx.user_id !== userId) {
+    if (tx.user_id !== user_id) {
       throw new Error("You are not authorized to confirm this transaction");
     }
 
@@ -211,7 +211,7 @@ async function PaymentTransactionService({
     // 4. Check if expired
     if (tx.expires_at && tx.expires_at < new Date()) {
       await prisma.transaction.update({
-        where: { id: transactionId },
+        where: { id: id },
         data: { status: transaction_status.expired },
       });
 
@@ -228,7 +228,7 @@ async function PaymentTransactionService({
     const updatedTx = await prisma.$transaction(async (txClient) => {
       // Update transaction with payment proof and status inside the transaction
       const updatedTransaction = await txClient.transaction.update({
-        where: { id: transactionId },
+        where: { id: id },
         data: {
           payment_proof: fileName, // Save the secure URL in the database
           status: transaction_status.waiting_for_admin_confirmation,
@@ -249,11 +249,11 @@ async function PaymentTransactionService({
 //Event Organizer Action Confirm or Reject
 async function EOActionTransactionService(param: IEOActionTransactionParam) {
   try {
-    const { transactionId, userId, action } = param;
+    const { transaction_id, user_id, action } = param;
 
     // Fetch the transaction along with its event to ensure the EO is authorized to act
     const transaction = await prisma.transaction.findUnique({
-      where: { id: transactionId },
+      where: { id: transaction_id },
       include: {
         event: true,
         user: {
@@ -270,7 +270,7 @@ async function EOActionTransactionService(param: IEOActionTransactionParam) {
     const event = transaction.event;
 
     // Ensure the transaction belongs to the correct event organizer
-    if (event.organizer_id !== userId) {
+    if (event.organizer_id !== user_id) {
       throw new Error("You are not authorized to modify this transaction");
     }
 
@@ -329,7 +329,7 @@ async function EOActionTransactionService(param: IEOActionTransactionParam) {
 
         // e) Update the transaction status
         const updatedTransaction = await txClient.transaction.update({
-          where: { id: transactionId },
+          where: { id: transaction_id },
           data: {
             status: updatedStatus,
             updated_at: new Date(),
@@ -367,7 +367,7 @@ async function EOActionTransactionService(param: IEOActionTransactionParam) {
       return await prisma.$transaction(async (txClient) => {
         // Update the transaction status
         const updatedTransaction = await txClient.transaction.update({
-          where: { id: transactionId },
+          where: { id: transaction_id },
           data: {
             status: updatedStatus,
             updated_at: new Date(),
@@ -385,7 +385,7 @@ async function EOActionTransactionService(param: IEOActionTransactionParam) {
               ticket_code: ticketCode,
               event_id: transaction.event_id,
               user_id: transaction.user_id,
-              transaction_id: transactionId,
+              transaction_id: transaction_id,
             },
           });
 
@@ -541,6 +541,62 @@ async function GetUserTicketsService(userId: string) {
   }
 }
 
+async function GetTransactionByIdService(
+  transactionId: string,
+  userId: string
+) {
+  try {
+    // Find the transaction with the given ID
+    const transaction = await prisma.transaction.findUnique({
+      where: { id: transactionId },
+      include: {
+        event: {
+          select: {
+            id: true,
+            name: true,
+            location: true,
+            start_date: true,
+            end_date: true,
+            event_image: true,
+            organizer_id: true,
+            organizer: {
+              select: {
+                username: true,
+                email: true,
+              },
+            },
+          },
+        },
+        user: {
+          select: {
+            id: true,
+            username: true,
+            email: true,
+          },
+        },
+        tickets: true,
+      },
+    });
+
+    if (!transaction) {
+      throw new Error("Transaction not found");
+    }
+
+    // Check if the user is authorized to view this transaction
+    // Either the user owns the transaction or is the event organizer
+    if (
+      transaction.user_id !== userId &&
+      transaction.event.organizer_id !== userId
+    ) {
+      throw new Error("You are not authorized to view this transaction");
+    }
+
+    return transaction;
+  } catch (err) {
+    throw err;
+  }
+}
+
 export {
   CreateTransactionService,
   PaymentTransactionService,
@@ -548,4 +604,5 @@ export {
   AutoExpireTransactionService,
   AutoCancelTransactionService,
   GetUserTicketsService,
+  GetTransactionByIdService,
 };

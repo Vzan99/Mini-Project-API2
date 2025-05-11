@@ -58,7 +58,7 @@ export const resetPasswordSchema = z.object({
     .email("Invalid email format")
     .nonempty("Email is required"),
   reset_token: z.string().nonempty("Reset token is required"),
-  newPassword: z
+  new_password: z
     .string()
     .min(6, "Password must be at least 6 characters")
     .regex(/[A-Z]/, "Password must contain at least one uppercase letter")

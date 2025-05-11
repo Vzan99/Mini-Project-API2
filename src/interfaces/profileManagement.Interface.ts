@@ -12,7 +12,7 @@ export interface iForgotPasswordParam {
 export interface iResetPasswordParam {
   email: string;
   reset_token: string;
-  newPassword: string;
+  new_password: string;
 }
 
 export interface iChangePasswordParam {

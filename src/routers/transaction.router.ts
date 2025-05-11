@@ -4,6 +4,7 @@ import {
   PaymentTransactionController,
   EOActionTransactionController,
   GetUserTicketsController,
+  GetTransactionByIdController,
 } from "../controllers/transaction.controller";
 import { Multer } from "../utils/multer";
 import ParamValidator from "../middlewares/paramValidator.middleware"; // Custom param validator
@@ -12,6 +13,7 @@ import {
   CreateTransactionSchema,
   EOActionSchema,
   PaymentParamSchema,
+  TransactionIdParamSchema,
 } from "../schemas/transaction.schema"; // Import schemas
 import { TokenVerification } from "../middlewares/auth.middleware";
 
@@ -25,11 +27,22 @@ router.post(
   CreateTransactionController
 );
 
+// Get user's tickets (must come before /:transactionId route)
+router.get("/tickets", TokenVerification, GetUserTicketsController);
+
+// Get transaction by ID
+router.get(
+  "/:id",
+  TokenVerification,
+  ParamValidator(TransactionIdParamSchema),
+  GetTransactionByIdController
+);
+
 // EO Action (param and body validated)
 router.post(
-  "/:transactionId/action",
+  "/:id/action",
   TokenVerification,
-  ParamValidator(EOActionSchema.pick({ transactionId: true })), // Validate transactionId param
+  ParamValidator(EOActionSchema.pick({ id: true })), // Validate transactionId param
   ReqValidator(EOActionSchema.pick({ action: true })), // Validate action in body
   EOActionTransactionController
 );
@@ -42,8 +55,5 @@ router.post(
   Multer().single("payment_proof"), // Handle file upload
   PaymentTransactionController
 );
-
-// NEW ENDPOINT: Get user's tickets
-router.get("/tickets", TokenVerification, GetUserTicketsController);
 
 export default router;

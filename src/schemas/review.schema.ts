@@ -1,8 +1,8 @@
 import { z } from "zod";
 
 export const createReviewSchema = z.object({
-  userId: z.string().uuid("Invalid user ID format"),
-  eventId: z.string().uuid("Invalid event ID format"),
+  user_id: z.string().uuid("Invalid user ID format"),
+  event_id: z.string().uuid("Invalid event ID format"),
   rating: z
     .number({
       required_error: "Rating is required",

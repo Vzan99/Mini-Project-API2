@@ -124,7 +124,7 @@ async function verifyResetTokenService(param: iVerifyResetTokenParam) {
 // Reset password with token
 async function resetPasswordService(param: iResetPasswordParam) {
   try {
-    const { email, reset_token, newPassword } = param;
+    const { email, reset_token, new_password } = param;
 
     return await prisma.$transaction(async (tx) => {
       // Find user within transaction - use findFirst instead of findUnique
@@ -156,7 +156,7 @@ async function resetPasswordService(param: iResetPasswordParam) {
 
       // Hash the new password
       const salt = genSaltSync(10);
-      const hashedPassword = await hash(newPassword, salt);
+      const hashedPassword = await hash(new_password, salt);
 
       // Update password and clear token
       await tx.user.update({

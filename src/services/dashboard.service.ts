@@ -84,9 +84,9 @@ async function GetEventStatisticsService(
       },
     });
 
-    const totalEvents = events.length;
-    let totalAttendees = 0;
-    let totalRevenue = 0;
+    const total_events = events.length;
+    let total_attendees = 0;
+    let total_revenue = 0;
     const categoryMap = new Map<string, number>();
 
     events.forEach((event) => {
@@ -94,12 +94,12 @@ async function GetEventStatisticsService(
       categoryMap.set(category, (categoryMap.get(category) || 0) + 1);
 
       event.transactions.forEach((tx) => {
-        totalAttendees += tx.quantity;
-        totalRevenue += tx.total_pay_amount;
+        total_attendees += tx.quantity;
+        total_revenue += tx.total_pay_amount;
       });
     });
 
-    const eventsByCategory = Array.from(categoryMap.entries()).map(
+    const events_by_category = Array.from(categoryMap.entries()).map(
       ([category, count]) => ({
         category,
         count,
@@ -131,28 +131,28 @@ async function GetEventStatisticsService(
       },
     });
 
-    const formattedTransactions = recentTransactions.map((tx) => ({
+    const recent_transactions = recentTransactions.map((tx) => ({
       id: tx.id,
-      eventName: tx.event.name,
-      customerName: tx.user.username,
+      event_name: tx.event.name,
+      customer_name: tx.user.username,
       amount: tx.total_pay_amount,
       status: tx.status,
       date: tx.created_at,
     }));
 
     // Generate time series data for charts - sekarang menggunakan helper function
-    const timeSeriesData = await generateTimeSeriesData(
+    const time_series_data = await generateTimeSeriesData(
       organizerId,
       timeFilter
     );
 
     return {
-      totalEvents,
-      totalAttendees,
-      totalRevenue,
-      eventsByCategory,
-      recentTransactions: formattedTransactions,
-      timeSeriesData,
+      total_events,
+      total_attendees,
+      total_revenue,
+      events_by_category,
+      recent_transactions,
+      time_series_data,
     };
   } catch (err) {
     throw err;
@@ -290,12 +290,12 @@ async function UpdateEventImageService(param: IUpdateEventImageParam) {
   let imageUrl: string | null = null;
   let fileName = "";
   try {
-    const { eventId, organizerId, file } = param;
+    const { event_id, organizer_id, file } = param;
 
     // Check if event exists and organizer is the owner
     const event = await prisma.event.findUnique({
       where: {
-        id: param.eventId,
+        id: param.event_id,
       },
     });
 
@@ -303,7 +303,7 @@ async function UpdateEventImageService(param: IUpdateEventImageParam) {
       throw new Error("Event not found");
     }
 
-    if (event.organizer_id !== organizerId) {
+    if (event.organizer_id !== organizer_id) {
       throw new Error("You don't have permission to update this event");
     }
 
@@ -321,13 +321,13 @@ async function UpdateEventImageService(param: IUpdateEventImageParam) {
     const result = await prisma.$transaction(async (t) => {
       // Get current event to check if we need to delete old event image
       const currentEvent = await t.event.findUnique({
-        where: { id: eventId },
+        where: { id: event_id },
         select: { event_image: true },
       });
 
       // Update event's image
       const updatedEvent = await t.event.update({
-        where: { id: eventId },
+        where: { id: event_id },
         data: {
           event_image: fileName,
         },

@@ -50,11 +50,11 @@ async function ResetPasswordController(
   next: NextFunction
 ) {
   try {
-    const { email, reset_token, newPassword } = req.body;
+    const { email, reset_token, new_password } = req.body;
     const result = await resetPasswordService({
       email,
       reset_token,
-      newPassword,
+      new_password,
     });
     res.status(200).json({
       status: "success",
@@ -72,11 +72,11 @@ async function ChangePasswordController(
   next: NextFunction
 ) {
   try {
-    const userId = req.user.id;
+    const user_id = req.user.id;
     const { current_password, new_password } = req.body;
 
     const result = await changePasswordService({
-      id: userId,
+      id: user_id,
       current_password,
       new_password,
     });
@@ -123,14 +123,14 @@ async function UploadProfilePictureController(
   next: NextFunction
 ) {
   try {
-    const userId = req.user.id;
+    const user_id = req.user.id;
 
     if (!req.file) {
       throw new Error("file not found");
     }
 
     const result = await uploadProfilePictureService({
-      id: userId,
+      id: user_id,
       file: req.file,
     });
 

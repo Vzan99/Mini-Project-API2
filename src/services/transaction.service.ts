@@ -1,5 +1,5 @@
 import prisma from "../lib/prisma";
-import { transaction_status } from "@prisma/client";
+import { transaction_status, Prisma } from "@prisma/client";
 import {
   ICreateTransactionParam,
   IPaymentTransactionParam,
@@ -344,78 +344,85 @@ async function EOActionTransactionService(param: IEOActionTransactionParam) {
           "ticketRejected.template.hbs"
         );
 
-        const templateSource = fs.readFileSync(emailTemplatePatch, "utf8");
-        const compiledEmailTemplate = Handlebars.compile(templateSource);
-        const htmlContent = compiledEmailTemplate({
-          username: transaction.user.username,
-          eventName: transaction.event.name,
-          transactionId: transaction.id,
-          rejectionReason: "Your transaction has been rejected",
-        });
+        // const templateSource = fs.readFileSync(emailTemplatePatch, "utf8");
+        // const compiledEmailTemplate = Handlebars.compile(templateSource);
+        // const htmlContent = compiledEmailTemplate({
+        //   username: transaction.user.username,
+        //   eventName: transaction.event.name,
+        //   transactionId: transaction.id,
+        //   rejectionReason: "Your transaction has been rejected",
+        // });
 
-        await transporter.sendMail({
-          from: '"Ticket Admin" <no-reply@yourdomain.com>',
-          to: transaction.user.email,
-          subject: "Transaction Rejected",
-          html: htmlContent,
-        });
+        // await transporter.sendMail({
+        //   from: '"Ticket Admin" <no-reply@yourdomain.com>',
+        //   to: transaction.user.email,
+        //   subject: "Transaction Rejected",
+        //   html: htmlContent,
+        // });
 
         return updatedTransaction;
       });
     } else {
       // For confirmation, update status and generate tickets
-      return await prisma.$transaction(async (txClient) => {
-        // Update the transaction status
-        const updatedTransaction = await txClient.transaction.update({
-          where: { id: id },
-          data: {
-            status: updatedStatus,
-            updated_at: new Date(),
-          },
-        });
-
-        // Generate tickets for the confirmed transaction
-        const tickets = [];
-        for (let i = 0; i < transaction.quantity; i++) {
-          // Generate random ticket code
-          const ticketCode = randomBytes(8).toString("hex").toUpperCase();
-
-          const ticket = await txClient.ticket.create({
+      return await prisma.$transaction(
+        async (txClient) => {
+          // Update the transaction status
+          const updatedTransaction = await txClient.transaction.update({
+            where: { id: id },
             data: {
-              ticket_code: ticketCode,
-              event_id: transaction.event_id,
-              user_id: transaction.user_id,
-              transaction_id: id,
+              status: updatedStatus,
+              updated_at: new Date(),
             },
           });
 
-          tickets.push(ticket);
+          // Generate tickets for the confirmed transaction
+          const tickets = [];
+          for (let i = 0; i < transaction.quantity; i++) {
+            // Generate random ticket code
+            const ticketCode = randomBytes(8).toString("hex").toUpperCase();
+
+            const ticket = await txClient.ticket.create({
+              data: {
+                ticket_code: ticketCode,
+                event_id: transaction.event_id,
+                user_id: transaction.user_id,
+                transaction_id: id,
+              },
+            });
+
+            tickets.push(ticket);
+          }
+
+          // Send confirmation email to customer
+          const emailTemplatePath = path.join(
+            __dirname,
+            "../templates",
+            "ticketConfirmed.template.hbs"
+          );
+
+          const templateSource = fs.readFileSync(emailTemplatePath, "utf8");
+          const compiledEmailTemplate = handlebars.compile(templateSource);
+          const htmlContent = compiledEmailTemplate({
+            username: transaction.user.username,
+            eventName: transaction.event.name,
+            transactionId: transaction.id,
+          });
+
+          await transporter.sendMail({
+            from: '"Ticket Admin" <no-reply@yourdomain.com>',
+            to: transaction.user.email,
+            subject: "Transaction Confirmed",
+            html: htmlContent,
+          });
+
+          return { ...updatedTransaction, tickets };
+        },
+        {
+          timeout: 10000, // Increase timeout to 10 seconds
+          maxWait: 5000, // Maximum time to wait for transaction to start
+          isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted, // Less strict isolation level
         }
-
-        // Send confirmation email to customer
-        const emailTemplatePath = path.join(
-          __dirname,
-          "../templates",
-          "ticketConfirmed.template.hbs"
-        );
-
-        const templateSource = fs.readFileSync(emailTemplatePath, "utf8");
-        const compiledEmailTemplate = handlebars.compile(templateSource);
-        const htmlContent = compiledEmailTemplate({
-          username: transaction.user.username,
-          eventName: transaction.event.name,
-          transactionId: transaction.id,
-        });
-
-        await transporter.sendMail({
-          from: '"Ticket Admin" <no-reply@yourdomain.com>',
-          to: transaction.user.email,
-          subject: "Transaction Confirmed",
-          html: htmlContent,
-        });
-
-        return { ...updatedTransaction, tickets };
-      });
+      );
     }
   } catch (err) {
     throw err;

@@ -167,13 +167,44 @@ async function FilterEventsService(filters: FilterParams) {
       whereClause.remaining_seats = { gt: 0 };
     }
 
-    // Handle specific date filter (new)
+    // Handle specific date filter
     if (filters.specific_date) {
-      // Find events where the specific date falls within the event's date range
-      // (start_date <= specificDate <= end_date)
+      const specificDate = new Date(filters.specific_date);
+
+      // Create start of day in user's local timezone, then convert to UTC for database comparison
+      const startOfDay = new Date(
+        Date.UTC(
+          specificDate.getFullYear(),
+          specificDate.getMonth(),
+          specificDate.getDate(),
+          0,
+          0,
+          0,
+          0
+        )
+      );
+
+      // Create end of day in user's local timezone, then convert to UTC for database comparison
+      const endOfDay = new Date(
+        Date.UTC(
+          specificDate.getFullYear(),
+          specificDate.getMonth(),
+          specificDate.getDate(),
+          23,
+          59,
+          59,
+          999
+        )
+      );
+
+      console.log(`Filtering for date: ${specificDate.toDateString()}`);
+      console.log(`Start of day (UTC): ${startOfDay.toISOString()}`);
+      console.log(`End of day (UTC): ${endOfDay.toISOString()}`);
+
+      // Find events that overlap with this day
       whereClause.AND = [
-        { start_date: { lte: filters.specific_date } },
-        { end_date: { gte: filters.specific_date } },
+        { start_date: { lte: endOfDay } }, // Event starts before or at the end of the day
+        { end_date: { gte: startOfDay } }, // Event ends after or at the start of the day
       ];
     } else {
       // Use existing date range filters only if specificDate is not provided

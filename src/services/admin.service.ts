@@ -31,12 +31,20 @@ async function GetOrganizerProfileService(organizer_id: string) {
       },
     });
 
-    // Flatten all reviews
-    const allReviews = events.flatMap((event) => event.review);
+    // Flatten all reviews with event info
+    const allReviews = events.flatMap((event) =>
+      event.review.map((review) => ({
+        ...review,
+        event_name: event.name,
+        event_id: event.id,
+      }))
+    );
 
+    // Calculate average rating from all reviews
     const average_rating =
       allReviews.length > 0
-        ? allReviews.reduce((sum, r) => sum + r.rating, 0) / allReviews.length
+        ? allReviews.reduce((sum, review) => sum + review.rating, 0) /
+          allReviews.length
         : 0;
 
     return {
@@ -49,7 +57,7 @@ async function GetOrganizerProfileService(organizer_id: string) {
       },
       average_rating,
       total_reviews: allReviews.length,
-      reviews: allReviews,
+      reviews: allReviews, // Now includes event_name and event_id
       events: events.map((e) => ({
         id: e.id,
         name: e.name,

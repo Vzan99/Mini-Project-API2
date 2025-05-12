@@ -116,8 +116,8 @@ async function RegisterService(param: IRegisterParam) {
     });
 
     const emailTemplatePath = path.join(
-      __dirname,
-      "../templates",
+      process.cwd(),
+      "src/templates",
       "registrationMessage.template.hbs"
     );
     const templateSource = fs.readFileSync(emailTemplatePath, "utf8");

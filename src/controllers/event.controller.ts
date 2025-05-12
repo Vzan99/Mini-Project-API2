@@ -4,6 +4,7 @@ import {
   GetEventByIdService,
   SearchEventsService,
   FilterEventsService,
+  GetPastEventsService,
 } from "../services/event.service";
 
 async function CreateEventController(
@@ -93,9 +94,34 @@ async function FilterEventsController(
   }
 }
 
+async function GetPastEventsController(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const userId = req.user.id;
+    const { page, limit } = req.query;
+
+    const pastEvents = await GetPastEventsService(
+      userId,
+      Number(page) || 1,
+      Number(limit) || 10
+    );
+
+    res.status(200).json({
+      message: "Past events retrieved successfully",
+      data: pastEvents,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export {
   CreateEventController,
   GetEventByIdController,
   SearchEventsController,
   FilterEventsController,
+  GetPastEventsController,
 };

@@ -59,7 +59,6 @@ async function RegisterService(param: IRegisterParam) {
       //create new user
       const newUser = await tx.user.create({
         data: {
-          id: param.id,
           first_name: param.first_name,
           last_name: param.last_name,
           email: param.email,
@@ -116,23 +115,23 @@ async function RegisterService(param: IRegisterParam) {
       return newUser;
     });
 
-    // const emailTemplatePath = path.join(
-    //   __dirname,
-    //   "../templates",
-    //   "registrationMessage.template.hbs"
-    // );
-    // const templateSource = fs.readFileSync(emailTemplatePath, "utf8");
-    // const compiledEmailTemplate = Handlebars.compile(templateSource);
-    // const htmlContent = compiledEmailTemplate({
-    //   username: param.username || "there",
-    // });
+    const emailTemplatePath = path.join(
+      __dirname,
+      "../templates",
+      "registrationMessage.template.hbs"
+    );
+    const templateSource = fs.readFileSync(emailTemplatePath, "utf8");
+    const compiledEmailTemplate = Handlebars.compile(templateSource);
+    const htmlContent = compiledEmailTemplate({
+      username: param.username || "there",
+    });
 
-    // await transporter.sendMail({
-    //   from: '"Ticket Admin" <no-reply@yourdomain.com>',
-    //   to: param.email,
-    //   subject: "🎉 Registration Successful — Welcome to Ticket!",
-    //   html: htmlContent,
-    // });
+    await transporter.sendMail({
+      from: '"Ticket Admin" <no-reply@yourdomain.com>',
+      to: param.email,
+      subject: "🎉 Registration Successful — Welcome to Ticket!",
+      html: htmlContent,
+    });
     return user;
   } catch (err) {
     throw err;

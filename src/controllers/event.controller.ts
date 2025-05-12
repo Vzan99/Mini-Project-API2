@@ -12,12 +12,12 @@ async function CreateEventController(
   next: NextFunction
 ) {
   try {
-    const organizerId = req.user.id;
+    const organizer_id = req.user.id;
 
     const event = await CreateEventService({
       ...req.body,
       file: req.file, // Multer-attached file
-      organizerId, // alwi: menambahkan userid
+      organizer_id, // alwi: menambahkan userid
     });
 
     res.status(201).json({

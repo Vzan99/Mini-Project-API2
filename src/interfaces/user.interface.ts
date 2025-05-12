@@ -1,7 +1,7 @@
 import { role } from "@prisma/client"; //import enum from prisma
 
 export interface IRegisterParam {
-  id: string;
+  id?: string; // Make id optional
   first_name: string;
   last_name: string;
   email: string;

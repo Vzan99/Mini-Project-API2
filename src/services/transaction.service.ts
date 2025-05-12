@@ -344,21 +344,21 @@ async function EOActionTransactionService(param: IEOActionTransactionParam) {
           "ticketRejected.template.hbs"
         );
 
-        // const templateSource = fs.readFileSync(emailTemplatePatch, "utf8");
-        // const compiledEmailTemplate = Handlebars.compile(templateSource);
-        // const htmlContent = compiledEmailTemplate({
-        //   username: transaction.user.username,
-        //   eventName: transaction.event.name,
-        //   transactionId: transaction.id,
-        //   rejectionReason: "Your transaction has been rejected",
-        // });
+        const templateSource = fs.readFileSync(emailTemplatePatch, "utf8");
+        const compiledEmailTemplate = Handlebars.compile(templateSource);
+        const htmlContent = compiledEmailTemplate({
+          username: transaction.user.username,
+          eventName: transaction.event.name,
+          transactionId: transaction.id,
+          rejectionReason: "Your transaction has been rejected",
+        });
 
-        // await transporter.sendMail({
-        //   from: '"Ticket Admin" <no-reply@yourdomain.com>',
-        //   to: transaction.user.email,
-        //   subject: "Transaction Rejected",
-        //   html: htmlContent,
-        // });
+        await transporter.sendMail({
+          from: '"Ticket Admin" <no-reply@yourdomain.com>',
+          to: transaction.user.email,
+          subject: "Transaction Rejected",
+          html: htmlContent,
+        });
 
         return updatedTransaction;
       });

@@ -124,3 +124,8 @@ export const filterEventSchema = z
       path: ["endDate"],
     }
   );
+
+export const pastEventsSchema = z.object({
+  page: z.coerce.number().positive().optional().default(1),
+  limit: z.coerce.number().positive().optional().default(10),
+});

@@ -1,8 +1,8 @@
 import prisma from "../lib/prisma";
 import { ICreateEventParam } from "../interfaces/event.interface";
 import { cloudinaryUpload, cloudinaryRemove } from "../utils/cloudinary";
-import { UUID } from "crypto";
 import { FilterParams } from "../interfaces/filter.interface";
+import { transaction_status } from "@prisma/client";
 
 async function CreateEventService(param: ICreateEventParam) {
   let imageUrl: string | null = null;
@@ -291,9 +291,89 @@ async function FilterEventsService(filters: FilterParams) {
   }
 }
 
+async function GetPastEventsService(
+  user_id: string,
+  page: number = 1,
+  limit: number = 10
+) {
+  try {
+    const now = new Date();
+
+    // Find events that have already ended
+    const totalEvents = await prisma.event.count({
+      where: {
+        end_date: { lt: now },
+        transactions: {
+          some: {
+            user_id: user_id,
+            status: transaction_status.confirmed,
+          },
+        },
+      },
+    });
+
+    const totalPages = Math.ceil(totalEvents / limit);
+
+    const pastEvents = await prisma.event.findMany({
+      where: {
+        end_date: { lt: now },
+        transactions: {
+          some: {
+            user_id: user_id,
+            status: transaction_status.confirmed,
+          },
+        },
+      },
+      include: {
+        organizer: {
+          select: {
+            id: true,
+            username: true,
+            first_name: true,
+            last_name: true,
+          },
+        },
+        review: {
+          where: {
+            user_id: user_id,
+          },
+        },
+        transactions: {
+          where: {
+            user_id: user_id,
+            status: transaction_status.confirmed,
+          },
+          include: {
+            tickets: true,
+          },
+          take: 1, // We only need one confirmed transaction
+        },
+      },
+      orderBy: {
+        end_date: "desc",
+      },
+      take: limit,
+      skip: (page - 1) * limit,
+    });
+
+    return {
+      events: pastEvents,
+      pagination: {
+        total: totalEvents,
+        totalPages,
+        currentPage: page,
+        limit,
+      },
+    };
+  } catch (err) {
+    throw err;
+  }
+}
+
 export {
   CreateEventService,
   GetEventByIdService,
   SearchEventsService,
   FilterEventsService,
+  GetPastEventsService,
 };

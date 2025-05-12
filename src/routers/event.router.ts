@@ -4,6 +4,7 @@ import {
   GetEventByIdController,
   SearchEventsController,
   FilterEventsController,
+  GetPastEventsController,
 } from "../controllers/event.controller";
 import ReqValidator from "../middlewares/reqValidator.middleware";
 import QueryValidator from "../middlewares/queryValidator.middleware";
@@ -13,6 +14,7 @@ import {
   searchEventSchema,
   eventIdSchema,
   filterEventSchema,
+  pastEventsSchema,
 } from "../schemas/event.schema";
 import { Multer } from "../utils/multer";
 import { TokenVerification } from "../middlewares/auth.middleware";
@@ -32,6 +34,14 @@ router.get(
   "/filter", // Endpoint for filtering events
   QueryValidator(filterEventSchema), // Validate query parameters
   FilterEventsController // Your controller logic
+);
+
+// Get past events that the user has attended
+router.get(
+  "/past",
+  TokenVerification,
+  QueryValidator(pastEventsSchema),
+  GetPastEventsController
 );
 
 // Get event by ID - with param validation

@@ -20,6 +20,8 @@ router.get("/filter", // Endpoint for filtering events
 (0, queryValidator_middleware_1.default)(event_schema_1.filterEventSchema), // Validate query parameters
 event_controller_1.FilterEventsController // Your controller logic
 );
+// Get past events that the user has attended
+router.get("/past", auth_middleware_1.TokenVerification, (0, queryValidator_middleware_1.default)(event_schema_1.pastEventsSchema), event_controller_1.GetPastEventsController);
 // Get event by ID - with param validation
 router.get("/:id", (0, paramValidator_middleware_1.default)(event_schema_1.eventIdSchema), event_controller_1.GetEventByIdController);
 // Create Event

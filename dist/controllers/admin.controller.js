@@ -12,15 +12,16 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.GetOrganizerProfileController = GetOrganizerProfileController;
 exports.GetCardSectionsController = GetCardSectionsController;
 exports.GetUniqueLocationsController = GetUniqueLocationsController;
+exports.GetUserProfileController = GetUserProfileController;
 const admin_service_1 = require("../services/admin.service");
 function GetOrganizerProfileController(req, res, next) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            const organizerId = String(req.params.id);
+            const organizer_id = String(req.params.id);
             // if (isNaN(organizerId)) {
             //   throw new Error("Invalid organizer ID");
             // }
-            const profile = yield (0, admin_service_1.GetOrganizerProfileService)(organizerId);
+            const profile = yield (0, admin_service_1.GetOrganizerProfileService)(organizer_id);
             res.status(200).json({
                 message: "Get organizer profile success!",
                 profile,
@@ -53,6 +54,26 @@ function GetUniqueLocationsController(req, res, next) {
             res.status(200).json({
                 message: "Unique locations fetched successfully",
                 data: locations,
+            });
+        }
+        catch (err) {
+            next(err);
+        }
+    });
+}
+//gak kepake
+function GetUserProfileController(req, res, next) {
+    return __awaiter(this, void 0, void 0, function* () {
+        var _a;
+        try {
+            // Get user ID from the authenticated user
+            const user_id = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
+            if (!user_id)
+                throw new Error("Unauthorized - User not authenticated");
+            const userData = yield (0, admin_service_1.GetUserProfileService)(user_id);
+            res.status(200).json({
+                message: "User profile retrieved successfully",
+                data: userData,
             });
         }
         catch (err) {

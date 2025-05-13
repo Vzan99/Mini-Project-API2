@@ -20,10 +20,36 @@ const jsonwebtoken_1 = require("jsonwebtoken");
 const config_1 = require("../config");
 const nodemailer_1 = require("../utils/nodemailer");
 const refferalcode_1 = require("../utils/refferalcode");
-const handlebars_1 = __importDefault(require("handlebars"));
-const path_1 = __importDefault(require("path"));
-const fs_1 = __importDefault(require("fs"));
 const userFinder_1 = require("../helper/userFinder");
+// Registration email template embedded directly in the service
+const registrationEmailTemplate = `
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Welcome to Ticket</title>
+  </head>
+  <body>
+    <div style="font-family: sans-serif; color: #333;">
+      <h2 style="color: #4F46E5;">Welcome to Ticket 🎫</h2>
+      <p>Hi USERNAME_PLACEHOLDER,</p>
+      <p>Thank you for registering! Your account has been successfully created.</p>
+      <p>Start exploring events, book your tickets, and be part of the
+        experiences that matter.</p>
+      <div style="margin: 24px 0;">
+        <a
+          href="https://yourdomain.com/login"
+          style="background-color: #4F46E5; color: white; padding: 12px 20px; text-decoration: none; border-radius: 6px;"
+        >
+          Go to Dashboard
+        </a>
+      </div>
+      <p>If you have any questions, feel free to reply to this email.</p>
+      <p>Cheers,<br /><strong>Ticket Team</strong></p>
+    </div>
+  </body>
+</html>
+`;
 function RegisterService(param) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
@@ -56,7 +82,6 @@ function RegisterService(param) {
                 //create new user
                 const newUser = yield tx.user.create({
                     data: {
-                        id: param.id,
                         first_name: param.first_name,
                         last_name: param.last_name,
                         email: param.email,
@@ -107,16 +132,12 @@ function RegisterService(param) {
                 }
                 return newUser;
             }));
-            const emailTemplatePath = path_1.default.join(__dirname, "../templates", "registrationMessage.template.hbs");
-            const templateSource = fs_1.default.readFileSync(emailTemplatePath, "utf8");
-            const compiledEmailTemplate = handlebars_1.default.compile(templateSource);
-            const htmlContent = compiledEmailTemplate({
-                username: param.username || "there",
-            });
+            // Ganti placeholder username dengan nilai sebenarnya
+            const htmlContent = registrationEmailTemplate.replace("USERNAME_PLACEHOLDER", param.username || "there");
             yield nodemailer_1.transporter.sendMail({
                 from: '"Ticket Admin" <no-reply@yourdomain.com>',
                 to: param.email,
-                subject: "🎉 Registration Successful — Welcome to Ticket!",
+                subject: "🎉 Registration Successful — Welcome to Quick Ticket!",
                 html: htmlContent,
             });
             return user;

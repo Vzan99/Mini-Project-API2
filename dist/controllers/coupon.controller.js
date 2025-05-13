@@ -9,21 +9,23 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.CreateReviewController = CreateReviewController;
-const review_service_1 = require("../services/review.service");
-function CreateReviewController(req, res, next) {
+exports.CheckCouponValidityController = CheckCouponValidityController;
+const coupon_service_1 = require("../services/coupon.service");
+function CheckCouponValidityController(req, res, next) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            // Get user_id from the authenticated token instead of request body
-            const user_id = req.user.id;
-            const { event_id, rating, review } = req.body;
-            const data = yield (0, review_service_1.CreateReviewService)({
-                user_id,
-                event_id,
-                rating,
-                review,
+            const { user_id, coupon_code } = req.query;
+            if (!user_id ||
+                !coupon_code ||
+                typeof user_id !== "string" ||
+                typeof coupon_code !== "string") {
+                throw new Error("User ID and coupon code are required");
+            }
+            const result = yield (0, coupon_service_1.CheckCouponValidityService)(user_id, coupon_code);
+            res.status(200).json({
+                message: result.message,
+                data: result,
             });
-            res.status(201).json({ message: "Review created", data });
         }
         catch (err) {
             next(err);

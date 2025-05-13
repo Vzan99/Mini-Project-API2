@@ -10,6 +10,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CreateVoucherController = CreateVoucherController;
+exports.CheckVoucherValidityController = CheckVoucherValidityController;
 const voucher_service_1 = require("../services/voucher.service");
 function CreateVoucherController(req, res, next) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -18,6 +19,27 @@ function CreateVoucherController(req, res, next) {
             res.status(201).send({
                 message: "Create Voucher Success",
                 data,
+            });
+        }
+        catch (err) {
+            next(err);
+        }
+    });
+}
+function CheckVoucherValidityController(req, res, next) {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            const { event_id, voucher_code } = req.query;
+            if (!event_id ||
+                !voucher_code ||
+                typeof event_id !== "string" ||
+                typeof voucher_code !== "string") {
+                throw new Error("Event ID and voucher code are required");
+            }
+            const result = yield (0, voucher_service_1.CheckVoucherValidityService)(event_id, voucher_code);
+            res.status(200).json({
+                message: result.message,
+                data: result,
             });
         }
         catch (err) {

@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.filterEventSchema = exports.eventIdSchema = exports.searchEventSchema = exports.createEventSchema = void 0;
+exports.pastEventsSchema = exports.filterEventSchema = exports.eventIdSchema = exports.searchEventSchema = exports.createEventSchema = void 0;
 const zod_1 = require("zod");
 const client_1 = require("@prisma/client");
 exports.createEventSchema = zod_1.z
@@ -9,14 +9,14 @@ exports.createEventSchema = zod_1.z
         .string()
         .min(1, "Event name is required")
         .max(100, "Event name is too long"),
-    startDate: zod_1.z.coerce
+    start_date: zod_1.z.coerce
         .date({
         errorMap: () => ({ message: "Start date must be a valid date" }),
     })
         .refine((date) => date > new Date(), {
         message: "Start date must be in the future",
     }),
-    endDate: zod_1.z.coerce.date({
+    end_date: zod_1.z.coerce.date({
         errorMap: () => ({ message: "End date must be a valid date" }),
     }),
     description: zod_1.z
@@ -33,7 +33,7 @@ exports.createEventSchema = zod_1.z
     })
         .int("Price must be an integer")
         .min(0, "Price cannot be negative"),
-    totalSeats: zod_1.z.coerce
+    total_seats: zod_1.z.coerce
         .number({
         errorMap: () => ({ message: "Total seats must be a number" }),
     })
@@ -43,7 +43,7 @@ exports.createEventSchema = zod_1.z
         errorMap: () => ({ message: "Invalid event category" }),
     }),
 })
-    .refine((data) => data.endDate > data.startDate, {
+    .refine((data) => data.end_date > data.start_date, {
     message: "End date must come after start date",
     path: ["endDate"],
 });
@@ -64,37 +64,37 @@ exports.filterEventSchema = zod_1.z
     })
         .optional(),
     location: zod_1.z.string().optional(),
-    minPrice: zod_1.z.coerce
+    min_price: zod_1.z.coerce
         .number()
         .min(0, "Minimum price cannot be negative")
         .optional(),
-    maxPrice: zod_1.z.coerce
+    max_price: zod_1.z.coerce
         .number()
         .min(0, "Maximum price cannot be negative")
         .optional(),
-    startDate: zod_1.z.coerce
+    start_date: zod_1.z.coerce
         .date({
         errorMap: () => ({ message: "Start date must be a valid date" }),
     })
         .optional()
         .default(() => new Date()),
-    endDate: zod_1.z.coerce.date().optional(),
-    availableSeatsOnly: zod_1.z.boolean().optional().default(false),
-    freeOnly: zod_1.z.boolean().optional().default(false),
-    specificDate: zod_1.z.coerce.date().optional(),
-    sortBy: zod_1.z
+    end_date: zod_1.z.coerce.date().optional(),
+    available_seats_only: zod_1.z.boolean().optional().default(false),
+    free_only: zod_1.z.boolean().optional().default(false),
+    specific_date: zod_1.z.coerce.date().optional(),
+    sort_by: zod_1.z
         .enum(["name", "price", "start_date", "location", "created_at"], {
         errorMap: () => ({ message: "Invalid sort field" }),
     })
         .optional()
         .default("start_date"),
-    sortOrder: zod_1.z.enum(["asc", "desc"]).optional().default("asc"),
+    sort_order: zod_1.z.enum(["asc", "desc"]).optional().default("asc"),
     page: zod_1.z.coerce.number().positive().optional().default(1),
     limit: zod_1.z.coerce.number().positive().optional().default(10),
 })
     .refine((data) => {
-    if (data.minPrice !== undefined && data.maxPrice !== undefined) {
-        return data.minPrice <= data.maxPrice;
+    if (data.min_price !== undefined && data.max_price !== undefined) {
+        return data.min_price <= data.max_price;
     }
     return true;
 }, {
@@ -102,11 +102,15 @@ exports.filterEventSchema = zod_1.z
     path: ["maxPrice"],
 })
     .refine((data) => {
-    if (data.startDate && data.endDate) {
-        return data.startDate <= data.endDate;
+    if (data.start_date && data.end_date) {
+        return data.start_date <= data.end_date;
     }
     return true;
 }, {
     message: "startDate must be before endDate",
     path: ["endDate"],
+});
+exports.pastEventsSchema = zod_1.z.object({
+    page: zod_1.z.coerce.number().positive().optional().default(1),
+    limit: zod_1.z.coerce.number().positive().optional().default(10),
 });

@@ -10,7 +10,7 @@ function Multer() {
     return (0, multer_1.default)({
         storage,
         limits: {
-            fileSize: 1024 * 1024,
+            fileSize: 5 * 1024 * 1024,
         },
     });
 }

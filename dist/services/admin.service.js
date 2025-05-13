@@ -15,14 +15,15 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.GetOrganizerProfileService = GetOrganizerProfileService;
 exports.GetCardSectionsService = GetCardSectionsService;
 exports.GetUniqueLocationsService = GetUniqueLocationsService;
+exports.GetUserProfileService = GetUserProfileService;
 const prisma_1 = __importDefault(require("../lib/prisma"));
 const client_1 = require("@prisma/client");
-function GetOrganizerProfileService(organizerId) {
+function GetOrganizerProfileService(organizer_id) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             // Ensure the user is actually an event_organizer and get their profile data
             const user = yield prisma_1.default.user.findUnique({
-                where: { id: organizerId },
+                where: { id: organizer_id },
                 select: {
                     role: true,
                     username: true,
@@ -36,7 +37,7 @@ function GetOrganizerProfileService(organizerId) {
             }
             // Fetch all events created by this organizer with more details
             const events = yield prisma_1.default.event.findMany({
-                where: { organizer_id: organizerId },
+                where: { organizer_id: organizer_id },
                 include: {
                     review: {
                         include: {
@@ -45,34 +46,36 @@ function GetOrganizerProfileService(organizerId) {
                     },
                 },
             });
-            // Flatten all reviews
-            const allReviews = events.flatMap((event) => event.review);
-            const averageRating = allReviews.length > 0
-                ? allReviews.reduce((sum, r) => sum + r.rating, 0) / allReviews.length
+            // Flatten all reviews with event info
+            const allReviews = events.flatMap((event) => event.review.map((review) => (Object.assign(Object.assign({}, review), { event_name: event.name, event_id: event.id }))));
+            // Calculate average rating from all reviews
+            const average_rating = allReviews.length > 0
+                ? allReviews.reduce((sum, review) => sum + review.rating, 0) /
+                    allReviews.length
                 : 0;
             return {
                 organizer: {
-                    id: organizerId,
+                    id: organizer_id,
                     username: user.username,
-                    firstName: user.first_name,
-                    lastName: user.last_name,
-                    profilePicture: user.profile_picture,
+                    first_name: user.first_name,
+                    last_name: user.last_name,
+                    profile_picture: user.profile_picture,
                 },
-                averageRating,
-                totalReviews: allReviews.length,
-                reviews: allReviews,
+                average_rating,
+                total_reviews: allReviews.length,
+                reviews: allReviews, // Now includes event_name and event_id
                 events: events.map((e) => ({
                     id: e.id,
                     name: e.name,
-                    startDate: e.start_date,
-                    endDate: e.end_date,
+                    start_date: e.start_date,
+                    end_date: e.end_date,
                     location: e.location,
                     price: e.price,
-                    totalSeats: e.total_seats,
-                    remainingSeats: e.remaining_seats,
+                    total_seats: e.total_seats,
+                    remaining_seats: e.remaining_seats,
                     category: e.category,
-                    eventImage: e.event_image,
-                    totalReviews: e.review.length,
+                    event_image: e.event_image,
+                    total_reviews: e.review.length,
                 })),
             };
         }
@@ -81,17 +84,18 @@ function GetOrganizerProfileService(organizerId) {
         }
     });
 }
-function GetCardSectionsService(categoryFilter) {
+function GetCardSectionsService(category_filter) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const now = new Date();
-            const categoriesToFetch = categoryFilter
-                ? [categoryFilter]
+            const categoriesToFetch = category_filter
+                ? [category_filter]
                 : Object.values(client_1.category);
-            const sections = yield Promise.all(categoriesToFetch.map((categoryValue) => __awaiter(this, void 0, void 0, function* () {
+            // If a specific category is requested, just return events for that category
+            if (category_filter) {
                 const events = yield prisma_1.default.event.findMany({
                     where: {
-                        category: categoryValue,
+                        category: category_filter,
                         start_date: { gt: now },
                     },
                     orderBy: { start_date: "asc" },
@@ -105,9 +109,33 @@ function GetCardSectionsService(categoryFilter) {
                         end_date: true,
                     },
                 });
-                return { category: categoryValue, events };
-            })));
-            return sections;
+                // Return just the array of events
+                return events;
+            }
+            // If no category filter, return events grouped by category
+            else {
+                const sectionsObject = {};
+                yield Promise.all(categoriesToFetch.map((categoryValue) => __awaiter(this, void 0, void 0, function* () {
+                    const events = yield prisma_1.default.event.findMany({
+                        where: {
+                            category: categoryValue,
+                            start_date: { gt: now },
+                        },
+                        orderBy: { start_date: "asc" },
+                        take: 3,
+                        select: {
+                            id: true,
+                            name: true,
+                            event_image: true,
+                            location: true,
+                            start_date: true,
+                            end_date: true,
+                        },
+                    });
+                    sectionsObject[categoryValue] = events;
+                })));
+                return sectionsObject;
+            }
         }
         catch (err) {
             throw err;
@@ -129,6 +157,58 @@ function GetUniqueLocationsService() {
             });
             // Extract just the location strings
             return locations.map((item) => item.location);
+        }
+        catch (err) {
+            throw err;
+        }
+    });
+}
+function GetUserProfileService(user_id) {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            // Find the user by ID
+            const user = yield prisma_1.default.user.findUnique({
+                where: { id: user_id },
+                select: {
+                    id: true,
+                    username: true,
+                    email: true,
+                    first_name: true,
+                    last_name: true,
+                    profile_picture: true,
+                    role: true,
+                    points: {
+                        where: {
+                            is_used: false,
+                            is_expired: false,
+                            expires_at: { gt: new Date() },
+                        },
+                        select: {
+                            id: true,
+                            points_amount: true,
+                            expires_at: true,
+                        },
+                    },
+                },
+            });
+            if (!user) {
+                throw new Error("User not found");
+            }
+            // Calculate total active points
+            const total_active_points = user.points.reduce((sum, point) => sum + point.points_amount, 0);
+            return {
+                id: user.id,
+                username: user.username,
+                email: user.email,
+                first_name: user.first_name,
+                last_name: user.last_name,
+                profile_picture: user.profile_picture,
+                role: user.role,
+                points: {
+                    total_active_points,
+                    details: user.points,
+                },
+            };
         }
         catch (err) {
             throw err;

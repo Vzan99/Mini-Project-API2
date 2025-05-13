@@ -16,8 +16,10 @@ exports.CreateEventService = CreateEventService;
 exports.GetEventByIdService = GetEventByIdService;
 exports.SearchEventsService = SearchEventsService;
 exports.FilterEventsService = FilterEventsService;
+exports.GetPastEventsService = GetPastEventsService;
 const prisma_1 = __importDefault(require("../lib/prisma"));
 const cloudinary_1 = require("../utils/cloudinary");
+const client_1 = require("@prisma/client");
 function CreateEventService(param) {
     return __awaiter(this, void 0, void 0, function* () {
         let imageUrl = null;
@@ -34,37 +36,37 @@ function CreateEventService(param) {
             const dup = yield prisma_1.default.event.findFirst({
                 where: {
                     name: param.name,
-                    start_date: param.startDate,
-                    end_date: param.endDate,
+                    start_date: param.start_date,
+                    end_date: param.end_date,
                     location: param.location,
                 },
             });
             if (dup)
                 throw new Error("An event with the same details already exists.");
             // 3) Business validations
-            if (param.endDate <= param.startDate) {
+            if (param.end_date <= param.start_date) {
                 throw new Error("End date must be after start date.");
             }
             if (param.price < 0) {
                 throw new Error("Price must be zero or greater.");
             }
-            if (param.totalSeats <= 0) {
+            if (param.total_seats <= 0) {
                 throw new Error("Total seats must be greater than zero.");
             }
             // 4) Create the event record
             const event = yield prisma_1.default.event.create({
                 data: {
                     name: param.name,
-                    start_date: param.startDate,
-                    end_date: param.endDate,
+                    start_date: param.start_date,
+                    end_date: param.end_date,
                     description: param.description,
                     event_image: fileName, // full URL or null
                     location: param.location,
                     price: param.price,
-                    total_seats: param.totalSeats,
-                    remaining_seats: param.totalSeats,
+                    total_seats: param.total_seats,
+                    remaining_seats: param.total_seats,
                     category: param.category,
-                    organizer_id: param.organizerId, // ID dari user yang terautentikasi
+                    organizer_id: param.organizer_id, // ID dari user yang terautentikasi
                 },
             });
             return event;
@@ -157,48 +159,55 @@ function FilterEventsService(filters) {
                     mode: "insensitive",
                 };
             }
-            // Price filters - handle freeOnly first
-            if (filters.freeOnly) {
+            // Price filters - handle free_only first
+            if (filters.free_only) {
                 whereClause.price = 0;
             }
-            else if (filters.minPrice !== undefined ||
-                filters.maxPrice !== undefined) {
+            else if (filters.min_price !== undefined ||
+                filters.max_price !== undefined) {
                 whereClause.price = {};
-                if (filters.minPrice !== undefined) {
-                    whereClause.price.gte = filters.minPrice;
+                if (filters.min_price !== undefined) {
+                    whereClause.price.gte = filters.min_price;
                 }
-                if (filters.maxPrice !== undefined) {
-                    whereClause.price.lte = filters.maxPrice;
+                if (filters.max_price !== undefined) {
+                    whereClause.price.lte = filters.max_price;
                 }
             }
             // Available seats filter
-            if (filters.availableSeatsOnly) {
+            if (filters.available_seats_only) {
                 whereClause.remaining_seats = { gt: 0 };
             }
-            // Handle specific date filter (new)
-            if (filters.specificDate) {
-                // Find events where the specific date falls within the event's date range
-                // (start_date <= specificDate <= end_date)
+            // Handle specific date filter
+            if (filters.specific_date) {
+                const specificDate = new Date(filters.specific_date);
+                // Create start of day in user's local timezone, then convert to UTC for database comparison
+                const startOfDay = new Date(Date.UTC(specificDate.getFullYear(), specificDate.getMonth(), specificDate.getDate(), 0, 0, 0, 0));
+                // Create end of day in user's local timezone, then convert to UTC for database comparison
+                const endOfDay = new Date(Date.UTC(specificDate.getFullYear(), specificDate.getMonth(), specificDate.getDate(), 23, 59, 59, 999));
+                console.log(`Filtering for date: ${specificDate.toDateString()}`);
+                console.log(`Start of day (UTC): ${startOfDay.toISOString()}`);
+                console.log(`End of day (UTC): ${endOfDay.toISOString()}`);
+                // Find events that overlap with this day
                 whereClause.AND = [
-                    { start_date: { lte: filters.specificDate } },
-                    { end_date: { gte: filters.specificDate } },
+                    { start_date: { lte: endOfDay } }, // Event starts before or at the end of the day
+                    { end_date: { gte: startOfDay } }, // Event ends after or at the start of the day
                 ];
             }
             else {
                 // Use existing date range filters only if specificDate is not provided
-                if (filters.startDate) {
-                    whereClause.start_date = { gte: filters.startDate };
+                if (filters.start_date) {
+                    whereClause.start_date = { gte: filters.start_date };
                 }
                 else {
                     whereClause.start_date = { gte: now };
                 }
-                if (filters.endDate) {
-                    whereClause.end_date = Object.assign(Object.assign({}, (whereClause.end_date || {})), { lte: filters.endDate });
+                if (filters.end_date) {
+                    whereClause.end_date = Object.assign(Object.assign({}, (whereClause.end_date || {})), { lte: filters.end_date });
                 }
             }
             // Sorting by field (e.g., name, price, start_date)
-            const sortBy = filters.sortBy || "start_date"; // Default sort by start_date
-            const sortOrder = filters.sortOrder || "asc"; // Default sort order is ascending
+            const sortBy = filters.sort_by || "start_date"; // Default sort by start_date
+            const sortOrder = filters.sort_order || "asc"; // Default sort order is ascending
             // Validate sortBy field
             const validSortFields = ["name", "price", "start_date", "location"];
             if (!validSortFields.includes(sortBy)) {
@@ -246,6 +255,79 @@ function FilterEventsService(filters) {
             }
             return {
                 events,
+                pagination: {
+                    total: totalEvents,
+                    totalPages,
+                    currentPage: page,
+                    limit,
+                },
+            };
+        }
+        catch (err) {
+            throw err;
+        }
+    });
+}
+function GetPastEventsService(user_id_1) {
+    return __awaiter(this, arguments, void 0, function* (user_id, page = 1, limit = 10) {
+        try {
+            const now = new Date();
+            // Find events that have already ended
+            const totalEvents = yield prisma_1.default.event.count({
+                where: {
+                    end_date: { lt: now },
+                    transactions: {
+                        some: {
+                            user_id: user_id,
+                            status: client_1.transaction_status.confirmed,
+                        },
+                    },
+                },
+            });
+            const totalPages = Math.ceil(totalEvents / limit);
+            const pastEvents = yield prisma_1.default.event.findMany({
+                where: {
+                    end_date: { lt: now },
+                    transactions: {
+                        some: {
+                            user_id: user_id,
+                            status: client_1.transaction_status.confirmed,
+                        },
+                    },
+                },
+                include: {
+                    organizer: {
+                        select: {
+                            id: true,
+                            username: true,
+                            first_name: true,
+                            last_name: true,
+                        },
+                    },
+                    review: {
+                        where: {
+                            user_id: user_id,
+                        },
+                    },
+                    transactions: {
+                        where: {
+                            user_id: user_id,
+                            status: client_1.transaction_status.confirmed,
+                        },
+                        include: {
+                            tickets: true,
+                        },
+                        take: 1, // We only need one confirmed transaction
+                    },
+                },
+                orderBy: {
+                    end_date: "desc",
+                },
+                take: limit,
+                skip: (page - 1) * limit,
+            });
+            return {
+                events: pastEvents,
                 pagination: {
                     total: totalEvents,
                     totalPages,

@@ -14,6 +14,7 @@ const auth_router_1 = __importDefault(require("./routers/auth.router"));
 const testdata_router_1 = __importDefault(require("./routers/testdata.router"));
 const admin_router_1 = __importDefault(require("./routers/admin.router"));
 const profileManagement_router_1 = __importDefault(require("./routers/profileManagement.router"));
+const coupon_router_1 = __importDefault(require("./routers/coupon.router"));
 const expire_transaction_task_1 = require("./utils/cron/expire-transaction-task");
 const cancel_transaction_task_1 = require("./utils/cron/cancel-transaction-task");
 const port = config_1.PORT || 8000;
@@ -21,7 +22,7 @@ const app = (0, express_1.default)();
 //Middleware
 app.use(express_1.default.json());
 app.use((0, cors_1.default)({
-    origin: ["http://localhost:3000", "http://127.0.0.1:3000"], // Allow both localhost variations
+    origin: config_1.FE_URL,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
@@ -38,6 +39,8 @@ app.get("/ping", (req, res) => {
 app.use("/events", event_router_1.default);
 //Vouchers
 app.use("/vouchers", voucher_router_1.default);
+//Coupons
+app.use("/coupon", coupon_router_1.default);
 //Transactions
 app.use("/transactions", transaction_router_1.default);
 //Reviews

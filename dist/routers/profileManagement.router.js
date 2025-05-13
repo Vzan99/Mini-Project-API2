@@ -10,6 +10,7 @@ const profileManagement_schema_1 = require("../schemas/profileManagement.schema"
 const multer_1 = require("../utils/multer");
 const auth_middleware_1 = require("../middlewares/auth.middleware");
 const router = (0, express_1.Router)();
+router.get("/with-points", auth_middleware_1.TokenVerification, profileManagement_controller_1.GetUserProfileWithPointsController);
 router.post("/forgot-password", (0, reqValidator_middleware_1.default)(profileManagement_schema_1.forgotPasswordSchema), profileManagement_controller_1.ForgotPasswordController);
 router.post("/verify-token", profileManagement_controller_1.VerifyResetTokenController);
 router.post("/reset-password", (0, reqValidator_middleware_1.default)(profileManagement_schema_1.resetPasswordSchema), profileManagement_controller_1.ResetPasswordController);

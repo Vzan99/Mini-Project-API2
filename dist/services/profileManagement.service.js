@@ -29,6 +29,7 @@ exports.resetPasswordService = resetPasswordService;
 exports.changePasswordService = changePasswordService;
 exports.updateProfileService = updateProfileService;
 exports.uploadProfilePictureService = uploadProfilePictureService;
+exports.getUserProfileWithPointsService = getUserProfileWithPointsService;
 const crypto_1 = require("crypto");
 const bcrypt_1 = require("bcrypt");
 const prisma_1 = __importDefault(require("../lib/prisma"));
@@ -36,8 +37,6 @@ const nodemailer_1 = require("../utils/nodemailer");
 const cloudinary_1 = require("../utils/cloudinary");
 const config_1 = require("../config");
 const handlebars_1 = __importDefault(require("handlebars"));
-const path_1 = __importDefault(require("path"));
-const fs_1 = __importDefault(require("fs"));
 function generateResetToken() {
     return (0, crypto_1.randomBytes)(32).toString("hex");
 }
@@ -64,6 +63,33 @@ function findUserByEmail(email) {
         }
     });
 }
+// Forgot password email template embedded directly in the service
+const forgotPasswordEmailTemplate = `
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Forgot Your Password?</title>
+  </head>
+  <body>
+    <div style="font-family: sans-serif; color: #333;">
+      <h2 style="color: #4F46E5;">Reset Your Password</h2>
+      <p>You requested a password reset for your Ticket account.</p>
+      <p>Click the button below to set a new password. This link is valid for 24
+        hours.</p>
+      <div style="margin: 24px 0;">
+        <a
+          href="https://yourdomain.com/reset-password?email={{email}}&token={{resetToken}}"
+          style="background-color: #4F46E5; color: white; padding: 12px 20px; text-decoration: none; border-radius: 6px;"
+        >
+          Reset Password
+        </a>
+      </div>
+      <p>If you didn't request this, please ignore this email.</p>
+    </div>
+  </body>
+</html>
+`;
 // request reset password
 function forgotPasswordService(param) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -85,9 +111,8 @@ function forgotPasswordService(param) {
                     reset_expires_at: resetExpiresAt,
                 },
             });
-            const forgotPassEmailTemplate = path_1.default.join(__dirname, "../templates/", "forgotPassword.template.hbs");
-            const templateSource = fs_1.default.readFileSync(forgotPassEmailTemplate, "utf8");
-            const forgotPassCompiledTemplate = handlebars_1.default.compile(templateSource);
+            // Use the embedded template instead of reading from file
+            const forgotPassCompiledTemplate = handlebars_1.default.compile(forgotPasswordEmailTemplate);
             const htmlContent = forgotPassCompiledTemplate({
                 email,
                 resetToken,
@@ -136,7 +161,7 @@ function verifyResetTokenService(param) {
 function resetPasswordService(param) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            const { email, reset_token, newPassword } = param;
+            const { email, reset_token, new_password } = param;
             return yield prisma_1.default.$transaction((tx) => __awaiter(this, void 0, void 0, function* () {
                 // Find user within transaction - use findFirst instead of findUnique
                 const user = yield tx.user.findFirst({
@@ -162,7 +187,7 @@ function resetPasswordService(param) {
                 }
                 // Hash the new password
                 const salt = (0, bcrypt_1.genSaltSync)(10);
-                const hashedPassword = yield (0, bcrypt_1.hash)(newPassword, salt);
+                const hashedPassword = yield (0, bcrypt_1.hash)(new_password, salt);
                 // Update password and clear token
                 yield tx.user.update({
                     where: { email },
@@ -318,6 +343,70 @@ function uploadProfilePictureService(param) {
             if (imageUrl) {
                 yield (0, cloudinary_1.cloudinaryRemove)(imageUrl);
             }
+            throw err;
+        }
+    });
+}
+function getUserProfileWithPointsService(userId) {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            // Get user profile
+            const user = yield prisma_1.default.user.findUnique({
+                where: { id: userId },
+                select: {
+                    id: true,
+                    username: true,
+                    email: true,
+                    first_name: true,
+                    last_name: true,
+                    profile_picture: true,
+                    role: true,
+                    created_at: true,
+                    user_referral_code: true,
+                },
+            });
+            if (!user) {
+                throw new Error("User not found");
+            }
+            // Get active (unused and not expired) points
+            const activePoints = yield prisma_1.default.points.findMany({
+                where: {
+                    user_id: userId,
+                    is_used: false,
+                    is_expired: false,
+                    expires_at: { gt: new Date() },
+                },
+                orderBy: {
+                    expires_at: "asc",
+                },
+            });
+            // Calculate total active points
+            const totalActivePoints = activePoints.reduce((sum, point) => sum + point.points_amount, 0);
+            // Get points history (both used and expired)
+            const pointsHistory = yield prisma_1.default.points.findMany({
+                where: {
+                    user_id: userId,
+                    OR: [
+                        { is_used: true },
+                        { is_expired: true },
+                        { expires_at: { lt: new Date() } },
+                    ],
+                },
+                orderBy: {
+                    credited_at: "desc",
+                },
+                take: 10, // Limit to recent 10 entries
+            });
+            return {
+                user,
+                points: {
+                    activePoints,
+                    totalActivePoints,
+                    pointsHistory,
+                },
+            };
+        }
+        catch (err) {
             throw err;
         }
     });

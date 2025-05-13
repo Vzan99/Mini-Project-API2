@@ -51,7 +51,7 @@ exports.resetPasswordSchema = zod_1.default.object({
         .email("Invalid email format")
         .nonempty("Email is required"),
     reset_token: zod_1.default.string().nonempty("Reset token is required"),
-    newPassword: zod_1.default
+    new_password: zod_1.default
         .string()
         .min(6, "Password must be at least 6 characters")
         .regex(/[A-Z]/, "Password must contain at least one uppercase letter")

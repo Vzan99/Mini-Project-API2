@@ -14,30 +14,30 @@ function BuildDateFilter(timeFilter) {
     return __awaiter(this, void 0, void 0, function* () {
         if (!timeFilter)
             return null;
-        // Jika menggunakan filterType (day, week, month, year)
-        if (timeFilter.filterType) {
+        // Jika menggunakan filter_type (day, week, month, year)
+        if (timeFilter.filter_type) {
             const now = new Date();
             const year = now.getFullYear();
             const month = now.getMonth();
             const day = now.getDate();
-            if (timeFilter.filterType === "day") {
+            if (timeFilter.filter_type === "day") {
                 const startDate = new Date(year, month, day);
                 const endDate = new Date(year, month, day + 1);
                 return { gte: startDate, lt: endDate };
             }
-            if (timeFilter.filterType === "week") {
+            if (timeFilter.filter_type === "week") {
                 const currentDay = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
                 const startDay = day - currentDay + (currentDay === 0 ? -6 : 1); // Adjust to get Monday
                 const startDate = new Date(year, month, startDay);
                 const endDate = new Date(year, month, startDay + 7);
                 return { gte: startDate, lt: endDate };
             }
-            if (timeFilter.filterType === "month") {
+            if (timeFilter.filter_type === "month") {
                 const startDate = new Date(year, month, 1);
                 const endDate = new Date(year, month + 1, 0);
                 return { gte: startDate, lte: endDate };
             }
-            if (timeFilter.filterType === "year") {
+            if (timeFilter.filter_type === "year") {
                 const startDate = new Date(year, 0, 1);
                 const endDate = new Date(year, 11, 31);
                 return { gte: startDate, lte: endDate };

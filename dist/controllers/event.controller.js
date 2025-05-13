@@ -13,13 +13,14 @@ exports.CreateEventController = CreateEventController;
 exports.GetEventByIdController = GetEventByIdController;
 exports.SearchEventsController = SearchEventsController;
 exports.FilterEventsController = FilterEventsController;
+exports.GetPastEventsController = GetPastEventsController;
 const event_service_1 = require("../services/event.service");
 function CreateEventController(req, res, next) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            const organizerId = req.user.id;
+            const organizer_id = req.user.id;
             const event = yield (0, event_service_1.CreateEventService)(Object.assign(Object.assign({}, req.body), { file: req.file, // Multer-attached file
-                organizerId }));
+                organizer_id }));
             res.status(201).json({
                 message: "Event created successfully",
                 data: event,
@@ -79,6 +80,22 @@ function FilterEventsController(req, res, next) {
         }
         catch (err) {
             next(err); // Pass the error to the error handling middleware
+        }
+    });
+}
+function GetPastEventsController(req, res, next) {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            const userId = req.user.id;
+            const { page, limit } = req.query;
+            const pastEvents = yield (0, event_service_1.GetPastEventsService)(userId, Number(page) || 1, Number(limit) || 10);
+            res.status(200).json({
+                message: "Past events retrieved successfully",
+                data: pastEvents,
+            });
+        }
+        catch (err) {
+            next(err);
         }
     });
 }

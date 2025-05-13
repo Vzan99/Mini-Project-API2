@@ -87,19 +87,19 @@ function GetEventStatisticsService(organizerId, timeFilter) {
                     },
                 },
             });
-            const totalEvents = events.length;
-            let totalAttendees = 0;
-            let totalRevenue = 0;
+            const total_events = events.length;
+            let total_attendees = 0;
+            let total_revenue = 0;
             const categoryMap = new Map();
             events.forEach((event) => {
                 const category = event.category.toString();
                 categoryMap.set(category, (categoryMap.get(category) || 0) + 1);
                 event.transactions.forEach((tx) => {
-                    totalAttendees += tx.quantity;
-                    totalRevenue += tx.total_pay_amount;
+                    total_attendees += tx.quantity;
+                    total_revenue += tx.total_pay_amount;
                 });
             });
-            const eventsByCategory = Array.from(categoryMap.entries()).map(([category, count]) => ({
+            const events_by_category = Array.from(categoryMap.entries()).map(([category, count]) => ({
                 category,
                 count,
             }));
@@ -127,23 +127,23 @@ function GetEventStatisticsService(organizerId, timeFilter) {
                     },
                 },
             });
-            const formattedTransactions = recentTransactions.map((tx) => ({
+            const recent_transactions = recentTransactions.map((tx) => ({
                 id: tx.id,
-                eventName: tx.event.name,
-                customerName: tx.user.username,
+                event_name: tx.event.name,
+                customer_name: tx.user.username,
                 amount: tx.total_pay_amount,
                 status: tx.status,
                 date: tx.created_at,
             }));
             // Generate time series data for charts - sekarang menggunakan helper function
-            const timeSeriesData = yield (0, generateTimeSeriesData_1.generateTimeSeriesData)(organizerId, timeFilter);
+            const time_series_data = yield (0, generateTimeSeriesData_1.generateTimeSeriesData)(organizerId, timeFilter);
             return {
-                totalEvents,
-                totalAttendees,
-                totalRevenue,
-                eventsByCategory,
-                recentTransactions: formattedTransactions,
-                timeSeriesData,
+                total_events,
+                total_attendees,
+                total_revenue,
+                events_by_category,
+                recent_transactions,
+                time_series_data,
             };
         }
         catch (err) {
@@ -276,17 +276,17 @@ function UpdateEventImageService(param) {
         let imageUrl = null;
         let fileName = "";
         try {
-            const { eventId, organizerId, file } = param;
+            const { event_id, organizer_id, file } = param;
             // Check if event exists and organizer is the owner
             const event = yield prisma_1.default.event.findUnique({
                 where: {
-                    id: param.eventId,
+                    id: param.event_id,
                 },
             });
             if (!event) {
                 throw new Error("Event not found");
             }
-            if (event.organizer_id !== organizerId) {
+            if (event.organizer_id !== organizer_id) {
                 throw new Error("You don't have permission to update this event");
             }
             // Upload new image to cloudinary
@@ -303,12 +303,12 @@ function UpdateEventImageService(param) {
             const result = yield prisma_1.default.$transaction((t) => __awaiter(this, void 0, void 0, function* () {
                 // Get current event to check if we need to delete old event image
                 const currentEvent = yield t.event.findUnique({
-                    where: { id: eventId },
+                    where: { id: event_id },
                     select: { event_image: true },
                 });
                 // Update event's image
                 const updatedEvent = yield t.event.update({
-                    where: { id: eventId },
+                    where: { id: event_id },
                     data: {
                         event_image: fileName,
                     },
@@ -338,15 +338,5 @@ function UpdateEventImageService(param) {
             }
             throw error;
         }
-    });
-}
-function AcceptTransactionService(transactionId) {
-    return __awaiter(this, void 0, void 0, function* () {
-        try {
-            const transaction = yield prisma_1.default.transaction.findUnique({
-                where: { id: transactionId },
-            });
-        }
-        catch (err) { }
     });
 }

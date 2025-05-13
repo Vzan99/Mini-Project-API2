@@ -30,7 +30,7 @@ export async function generateTimeSeriesData(
   });
 
   // Group by day, month, or year based on timeFilter
-  const groupBy = timeFilter?.filterType || "month";
+  const groupBy = timeFilter?.filter_type || "month";
 
   // Define the type for seriesData to fix TypeScript errors
   interface SeriesDataItem {

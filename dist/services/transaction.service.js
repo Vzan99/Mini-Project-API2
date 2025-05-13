@@ -17,20 +17,26 @@ exports.PaymentTransactionService = PaymentTransactionService;
 exports.EOActionTransactionService = EOActionTransactionService;
 exports.AutoExpireTransactionService = AutoExpireTransactionService;
 exports.AutoCancelTransactionService = AutoCancelTransactionService;
+exports.GetUserTicketsService = GetUserTicketsService;
+exports.GetTransactionByIdService = GetTransactionByIdService;
 const prisma_1 = __importDefault(require("../lib/prisma"));
 const client_1 = require("@prisma/client");
 const cloudinary_1 = require("../utils/cloudinary");
-const path_1 = __importDefault(require("path"));
-const fs_1 = __importDefault(require("fs"));
+const crypto_1 = require("crypto");
 const nodemailer_1 = require("../utils/nodemailer");
 //Create Transaction (Click "BuyTicket" Button from event details page)
 function CreateTransactionService(param) {
     return __awaiter(this, void 0, void 0, function* () {
-        const { userId, eventId, quantity, couponId, voucherId, pointsId } = param;
+        const { user_id, event_id, quantity, attend_date, // This is already a Date object
+        payment_method, coupon_id, voucher_id, points_id, } = param;
+        // Check that user doesn't try to use both voucher and coupon
+        if (coupon_id && voucher_id) {
+            throw new Error("You can only use either a voucher or a coupon, not both");
+        }
         // 1. Fetch Event & User
         const [event, user] = yield Promise.all([
-            prisma_1.default.event.findUnique({ where: { id: eventId } }),
-            prisma_1.default.user.findUnique({ where: { id: userId } }),
+            prisma_1.default.event.findUnique({ where: { id: event_id } }),
+            prisma_1.default.user.findUnique({ where: { id: user_id } }),
         ]);
         if (!event)
             throw new Error("Event not found");
@@ -40,16 +46,22 @@ function CreateTransactionService(param) {
         if (event.remaining_seats < quantity) {
             throw new Error("Not enough seats available");
         }
+        // 3. Validate attend date is within event dates
+        const eventStartDate = new Date(event.start_date);
+        const eventEndDate = new Date(event.end_date);
+        if (attend_date < eventStartDate || attend_date > eventEndDate) {
+            throw new Error("Attend date must be within event start and end dates");
+        }
         const now = new Date();
         // 3. Gather discounts
         let couponDiscount = 0;
         let voucherDiscount = 0;
         let pointsDiscount = 0;
         // 3a. Coupon
-        if (couponId) {
-            const coupon = yield prisma_1.default.coupon.findUnique({ where: { id: couponId } });
+        if (coupon_id) {
+            const coupon = yield prisma_1.default.coupon.findUnique({ where: { id: coupon_id } });
             if (!coupon ||
-                coupon.user_id !== userId ||
+                coupon.user_id !== user_id ||
                 now < coupon.coupon_start_date ||
                 now > coupon.coupon_end_date ||
                 coupon.use_count >= coupon.max_usage) {
@@ -58,12 +70,12 @@ function CreateTransactionService(param) {
             couponDiscount = coupon.discount_amount;
         }
         // 3b. Voucher
-        if (voucherId) {
+        if (voucher_id) {
             const voucher = yield prisma_1.default.voucher.findUnique({
-                where: { id: voucherId },
+                where: { id: voucher_id },
             });
             if (!voucher ||
-                voucher.event_id !== eventId ||
+                voucher.event_id !== event_id ||
                 now < voucher.voucher_start_date ||
                 now > voucher.voucher_end_date ||
                 voucher.usage_amount >= voucher.max_usage) {
@@ -72,10 +84,10 @@ function CreateTransactionService(param) {
             voucherDiscount = voucher.discount_amount;
         }
         // 3c. Points
-        if (pointsId) {
-            const points = yield prisma_1.default.points.findUnique({ where: { id: pointsId } });
+        if (points_id) {
+            const points = yield prisma_1.default.points.findUnique({ where: { id: points_id } });
             if (!points ||
-                points.user_id !== userId ||
+                points.user_id !== user_id ||
                 points.is_used ||
                 points.is_expired ||
                 now > points.expires_at) {
@@ -103,42 +115,44 @@ function CreateTransactionService(param) {
             // 6a. Create transaction
             const transaction = yield tx.transaction.create({
                 data: {
-                    user_id: userId,
-                    event_id: eventId,
+                    user_id,
+                    event_id,
                     quantity,
                     unit_price: event.price,
                     total_pay_amount: finalAmount,
                     payment_proof: null,
                     status,
                     expires_at: expiresAt,
-                    coupon_id: couponId !== null && couponId !== void 0 ? couponId : undefined,
-                    voucher_id: voucherId !== null && voucherId !== void 0 ? voucherId : undefined,
-                    points_id: pointsId !== null && pointsId !== void 0 ? pointsId : undefined,
+                    coupon_id: coupon_id !== null && coupon_id !== void 0 ? coupon_id : undefined,
+                    voucher_id: voucher_id !== null && voucher_id !== void 0 ? voucher_id : undefined,
+                    points_id: points_id !== null && points_id !== void 0 ? points_id : undefined,
+                    attend_date: attend_date,
+                    payment_method: payment_method,
                 },
             });
             // 6b. Decrement seats
             yield tx.event.update({
-                where: { id: eventId },
+                where: { id: event_id },
                 data: { remaining_seats: event.remaining_seats - quantity },
             });
             // 6c. Increment coupon usage
-            if (couponId) {
+            if (coupon_id) {
                 yield tx.coupon.update({
-                    where: { id: couponId },
+                    where: { id: coupon_id },
                     data: { use_count: { increment: 1 } },
                 });
             }
             // 6d. Increment voucher usage
-            if (voucherId) {
+            if (voucher_id) {
                 yield tx.voucher.update({
-                    where: { id: voucherId },
+                    where: { id: voucher_id },
                     data: { usage_amount: { increment: 1 } },
                 });
             }
             // 6e. Mark points used
-            if (pointsId) {
+            if (points_id) {
                 yield tx.points.update({
-                    where: { id: pointsId },
+                    where: { id: points_id },
                     data: {
                         is_used: true,
                     },
@@ -151,18 +165,18 @@ function CreateTransactionService(param) {
 }
 //Customer upload Payment Proof, and then change the status to "waiting_for_admin_confirmation"
 function PaymentTransactionService(_a) {
-    return __awaiter(this, arguments, void 0, function* ({ transactionId, userId, file, }) {
+    return __awaiter(this, arguments, void 0, function* ({ id, user_id, file, }) {
         let url = "";
         try {
             // 1. Get the transaction
             const tx = yield prisma_1.default.transaction.findUnique({
-                where: { id: transactionId },
+                where: { id: id },
             });
             if (!tx) {
                 throw new Error("Transaction not found");
             }
             // 2. Check ownership
-            if (tx.user_id !== userId) {
+            if (tx.user_id !== user_id) {
                 throw new Error("You are not authorized to confirm this transaction");
             }
             // 3. Must be in the correct status
@@ -172,7 +186,7 @@ function PaymentTransactionService(_a) {
             // 4. Check if expired
             if (tx.expires_at && tx.expires_at < new Date()) {
                 yield prisma_1.default.transaction.update({
-                    where: { id: transactionId },
+                    where: { id: id },
                     data: { status: client_1.transaction_status.expired },
                 });
                 throw new Error("Transaction has expired");
@@ -186,7 +200,7 @@ function PaymentTransactionService(_a) {
             const updatedTx = yield prisma_1.default.$transaction((txClient) => __awaiter(this, void 0, void 0, function* () {
                 // Update transaction with payment proof and status inside the transaction
                 const updatedTransaction = yield txClient.transaction.update({
-                    where: { id: transactionId },
+                    where: { id: id },
                     data: {
                         payment_proof: fileName, // Save the secure URL in the database
                         status: client_1.transaction_status.waiting_for_admin_confirmation,
@@ -208,10 +222,10 @@ function PaymentTransactionService(_a) {
 function EOActionTransactionService(param) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            const { transactionId, userId, action } = param;
+            const { id, user_id, action } = param;
             // Fetch the transaction along with its event to ensure the EO is authorized to act
             const transaction = yield prisma_1.default.transaction.findUnique({
-                where: { id: transactionId },
+                where: { id: id },
                 include: {
                     event: true,
                     user: {
@@ -226,7 +240,7 @@ function EOActionTransactionService(param) {
                 throw new Error("Transaction not found");
             const event = transaction.event;
             // Ensure the transaction belongs to the correct event organizer
-            if (event.organizer_id !== userId) {
+            if (event.organizer_id !== user_id) {
                 throw new Error("You are not authorized to modify this transaction");
             }
             // Check the current status of the transaction
@@ -273,22 +287,70 @@ function EOActionTransactionService(param) {
                     }
                     // e) Update the transaction status
                     const updatedTransaction = yield txClient.transaction.update({
-                        where: { id: transactionId },
+                        where: { id: id },
                         data: {
                             status: updatedStatus,
                             updated_at: new Date(),
                         },
                     });
-                    // d) Send email to customer
-                    const emailTemplatePatch = path_1.default.join(__dirname, "../templates", "ticketRejected.template.hbs");
-                    const templateSource = fs_1.default.readFileSync(emailTemplatePatch, "utf8");
-                    const compiledEmailTemplate = Handlebars.compile(templateSource);
-                    const htmlContent = compiledEmailTemplate({
-                        username: transaction.user.username,
-                        eventName: transaction.event.name,
-                        transactionId: transaction.id,
-                        rejectionReason: "Your transaction has been rejected",
-                    });
+                    // Send rejection email using template literals instead of Handlebars
+                    const htmlContent = `
+        <html lang="en">
+          <head>
+            <meta charset="UTF-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+            <title>Transaction Rejected</title>
+          </head>
+          <body>
+            <div
+              style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;"
+            >
+              <div style="text-align: center; margin-bottom: 20px;">
+                <h2 style="color: #e53e3e;">Transaction Rejected</h2>
+              </div>
+
+              <div
+                style="background-color: #f8f8f8; border-radius: 8px; padding: 20px; margin-bottom: 20px;"
+              >
+                <p>Hi ${transaction.user.username},</p>
+                <p>We regret to inform you that your transaction for
+                  <strong>${transaction.event.name}</strong>
+                  has been rejected by the event organizer.</p>
+
+                <div
+                  style="background-color: #fff; border-left: 4px solid #e53e3e; padding: 15px; margin: 15px 0;"
+                >
+                  <p style="margin: 0;"><strong>Transaction ID:</strong>
+                    ${transaction.id}</p>
+                  <p style="margin: 8px 0 0;"><strong>Rejection Reason:</strong>
+                    Your transaction has been rejected</p>
+                </div>
+
+                <p>Any points, vouchers, or coupons used for this transaction have been
+                  returned to your account. The seats you reserved have also been made
+                  available again.</p>
+              </div>
+
+              <div style="margin: 24px 0; text-align: center;">
+                <a
+                  href="https://yourdomain.com/my-transactions"
+                  style="background-color: #4F46E5; color: white; padding: 12px 20px; text-decoration: none; border-radius: 6px; display: inline-block;"
+                >
+                  View My Transactions
+                </a>
+              </div>
+
+              <div
+                style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px; font-size: 14px; color: #666;"
+              >
+                <p>If you have any questions about this rejection, please contact the
+                  event organizer directly or reply to this email for assistance.</p>
+                <p>Thank you for using our platform.</p>
+                <p>Best regards,<br /><strong>Ticket Team</strong></p>
+              </div>
+            </div>
+          </body>
+        </html>`;
                     yield nodemailer_1.transporter.sendMail({
                         from: '"Ticket Admin" <no-reply@yourdomain.com>',
                         to: transaction.user.email,
@@ -299,15 +361,100 @@ function EOActionTransactionService(param) {
                 }));
             }
             else {
-                // For confirmation, just update the status
-                const updatedTransaction = yield prisma_1.default.transaction.update({
-                    where: { id: transactionId },
-                    data: {
-                        status: updatedStatus,
-                        updated_at: new Date(),
-                    },
+                // For confirmation, update status and generate tickets
+                return yield prisma_1.default.$transaction((txClient) => __awaiter(this, void 0, void 0, function* () {
+                    // Update the transaction status
+                    const updatedTransaction = yield txClient.transaction.update({
+                        where: { id: id },
+                        data: {
+                            status: updatedStatus,
+                            updated_at: new Date(),
+                        },
+                    });
+                    // Generate tickets for the confirmed transaction
+                    const tickets = [];
+                    for (let i = 0; i < transaction.quantity; i++) {
+                        // Generate random ticket code
+                        const ticketCode = (0, crypto_1.randomBytes)(8).toString("hex").toUpperCase();
+                        const ticket = yield txClient.ticket.create({
+                            data: {
+                                ticket_code: ticketCode,
+                                event_id: transaction.event_id,
+                                user_id: transaction.user_id,
+                                transaction_id: id,
+                            },
+                        });
+                        tickets.push(ticket);
+                    }
+                    // Send confirmation email using template literals instead of Handlebars
+                    const htmlContent = `
+          <html lang="en">
+            <head>
+              <meta charset="UTF-8" />
+              <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+              <title>Transaction Confirmed</title>
+            </head>
+            <body>
+              <div
+                style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;"
+              >
+                <div style="text-align: center; margin-bottom: 20px;">
+                  <h2 style="color: #10b981;">Transaction Confirmed</h2>
+                </div>
+
+                <div
+                  style="background-color: #f8f8f8; border-radius: 8px; padding: 20px; margin-bottom: 20px;"
+                >
+                  <p>Hi ${transaction.user.username},</p>
+                  <p>Great news! Your transaction for
+                    <strong>${transaction.event.name}</strong>
+                    has been confirmed by the event organizer.</p>
+
+                  <div
+                    style="background-color: #fff; border-left: 4px solid #10b981; padding: 15px; margin: 15px 0;"
+                  >
+                    <p style="margin: 0;"><strong>Transaction ID:</strong>
+                      ${transaction.id}</p>
+                    <p style="margin: 8px 0 0;"><strong>Event Date:</strong>
+                      ${new Date(transaction.event.start_date).toLocaleDateString()}</p>
+                    <p style="margin: 8px 0 0;"><strong>Quantity:</strong>
+                      ${transaction.quantity} ticket(s)</p>
+                  </div>
+
+                  <p>You're all set! Your tickets are now confirmed and ready for the event.</p>
+                </div>
+
+                <div style="margin: 24px 0; text-align: center;">
+                  <a
+                    href="https://yourdomain.com/my-tickets"
+                    style="background-color: #4F46E5; color: white; padding: 12px 20px; text-decoration: none; border-radius: 6px; display: inline-block;"
+                  >
+                    View My Tickets
+                  </a>
+                </div>
+
+                <div
+                  style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px; font-size: 14px; color: #666;"
+                >
+                  <p>We look forward to seeing you at the event!</p>
+                  <p>If you have any questions, please contact the event organizer or reply to this email.</p>
+                  <p>Best regards,<br /><strong>Ticket Team</strong></p>
+                </div>
+              </div>
+            </body>
+          </html>`;
+                    yield nodemailer_1.transporter.sendMail({
+                        from: '"Ticket Admin" <no-reply@yourdomain.com>',
+                        to: transaction.user.email,
+                        subject: "Transaction Confirmed",
+                        html: htmlContent,
+                    });
+                    return Object.assign(Object.assign({}, updatedTransaction), { tickets });
+                }), {
+                    timeout: 10000, // Increase timeout to 10 seconds
+                    maxWait: 5000, // Maximum time to wait for transaction to start
+                    isolationLevel: client_1.Prisma.TransactionIsolationLevel.ReadCommitted, // Less strict isolation level
                 });
-                return updatedTransaction;
             }
         }
         catch (err) {
@@ -384,6 +531,98 @@ function AutoCancelTransactionService() {
                     });
                 }));
             }
+        }
+        catch (err) {
+            throw err;
+        }
+    });
+}
+function GetUserTicketsService(userId) {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            // Get all tickets belonging to the user with transaction and event details
+            const tickets = yield prisma_1.default.ticket.findMany({
+                where: {
+                    user_id: userId,
+                    transaction: {
+                        status: client_1.transaction_status.confirmed,
+                    },
+                },
+                include: {
+                    event: {
+                        select: {
+                            name: true,
+                            start_date: true,
+                            end_date: true,
+                            location: true,
+                            event_image: true,
+                        },
+                    },
+                    transaction: {
+                        select: {
+                            created_at: true,
+                            quantity: true,
+                            total_pay_amount: true,
+                        },
+                    },
+                },
+                orderBy: {
+                    event: {
+                        start_date: "asc",
+                    },
+                },
+            });
+            return tickets;
+        }
+        catch (err) {
+            throw err;
+        }
+    });
+}
+function GetTransactionByIdService(transactionId, userId) {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            // Find the transaction with the given ID
+            const transaction = yield prisma_1.default.transaction.findUnique({
+                where: { id: transactionId },
+                include: {
+                    event: {
+                        select: {
+                            id: true,
+                            name: true,
+                            location: true,
+                            start_date: true,
+                            end_date: true,
+                            event_image: true,
+                            organizer_id: true,
+                            organizer: {
+                                select: {
+                                    username: true,
+                                    email: true,
+                                },
+                            },
+                        },
+                    },
+                    user: {
+                        select: {
+                            id: true,
+                            username: true,
+                            email: true,
+                        },
+                    },
+                    tickets: true,
+                },
+            });
+            if (!transaction) {
+                throw new Error("Transaction not found");
+            }
+            // Check if the user is authorized to view this transaction
+            // Either the user owns the transaction or is the event organizer
+            if (transaction.user_id !== userId &&
+                transaction.event.organizer_id !== userId) {
+                throw new Error("You are not authorized to view this transaction");
+            }
+            return transaction;
         }
         catch (err) {
             throw err;

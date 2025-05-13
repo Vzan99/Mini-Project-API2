@@ -38,7 +38,7 @@ function generateTimeSeriesData(organizerId, timeFilter) {
             },
         });
         // Group by day, month, or year based on timeFilter
-        const groupBy = (timeFilter === null || timeFilter === void 0 ? void 0 : timeFilter.filterType) || "month";
+        const groupBy = (timeFilter === null || timeFilter === void 0 ? void 0 : timeFilter.filter_type) || "month";
         const seriesData = {};
         events.forEach((event) => {
             let dateKey;

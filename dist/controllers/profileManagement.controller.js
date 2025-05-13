@@ -15,6 +15,7 @@ exports.ResetPasswordController = ResetPasswordController;
 exports.ChangePasswordController = ChangePasswordController;
 exports.UpdateProfileController = UpdateProfileController;
 exports.UploadProfilePictureController = UploadProfilePictureController;
+exports.GetUserProfileWithPointsController = GetUserProfileWithPointsController;
 const profileManagement_service_1 = require("../services/profileManagement.service");
 function ForgotPasswordController(req, res, next) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -50,11 +51,11 @@ function VerifyResetTokenController(req, res, next) {
 function ResetPasswordController(req, res, next) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            const { email, reset_token, newPassword } = req.body;
+            const { email, reset_token, new_password } = req.body;
             const result = yield (0, profileManagement_service_1.resetPasswordService)({
                 email,
                 reset_token,
-                newPassword,
+                new_password,
             });
             res.status(200).json({
                 status: "success",
@@ -70,10 +71,10 @@ function ResetPasswordController(req, res, next) {
 function ChangePasswordController(req, res, next) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            const userId = req.user.id;
+            const user_id = req.user.id;
             const { current_password, new_password } = req.body;
             const result = yield (0, profileManagement_service_1.changePasswordService)({
-                id: userId,
+                id: user_id,
                 current_password,
                 new_password,
             });
@@ -113,17 +114,33 @@ function UpdateProfileController(req, res, next) {
 function UploadProfilePictureController(req, res, next) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            const userId = req.user.id;
+            const user_id = req.user.id;
             if (!req.file) {
                 throw new Error("file not found");
             }
             const result = yield (0, profileManagement_service_1.uploadProfilePictureService)({
-                id: userId,
+                id: user_id,
                 file: req.file,
             });
             res.status(200).json({
                 status: "success",
                 message: "Profile picture updated successfully",
+                data: result,
+            });
+        }
+        catch (err) {
+            next(err);
+        }
+    });
+}
+function GetUserProfileWithPointsController(req, res, next) {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            const userId = req.user.id;
+            const result = yield (0, profileManagement_service_1.getUserProfileWithPointsService)(userId);
+            res.status(200).json({
+                status: "success",
+                message: "User profile with points retrieved successfully",
                 data: result,
             });
         }

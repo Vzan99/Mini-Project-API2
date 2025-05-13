@@ -40,12 +40,12 @@ function GetOrganizerEventsController(req, res, next) {
 function GetEventStatisticsController(req, res, next) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            const organizerId = req.user.id;
-            const { filterType, year, month, day } = req.query;
+            const organizer_id = req.user.id;
+            const { filter_type, year, month, day } = req.query;
             // Build filter object from query parameters
             const timeFilter = {};
-            if (filterType) {
-                timeFilter.filterType = filterType;
+            if (filter_type) {
+                timeFilter.filter_type = filter_type;
             }
             if (year)
                 timeFilter.year = parseInt(year);
@@ -53,7 +53,7 @@ function GetEventStatisticsController(req, res, next) {
                 timeFilter.month = parseInt(month);
             if (day)
                 timeFilter.day = parseInt(day);
-            const statistics = yield (0, dashboard_service_1.GetEventStatisticsService)(organizerId, Object.keys(timeFilter).length > 0 ? timeFilter : undefined);
+            const statistics = yield (0, dashboard_service_1.GetEventStatisticsService)(organizer_id, Object.keys(timeFilter).length > 0 ? timeFilter : undefined);
             res.status(200).json({
                 message: "Statistics retrieved successfully",
                 data: statistics,
@@ -70,8 +70,8 @@ function GetEventStatisticsController(req, res, next) {
 function GetTransactionsController(req, res, next) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            const organizerId = req.user.id;
-            const transactions = yield (0, dashboard_service_1.GetTransactionService)(organizerId);
+            const organizer_id = req.user.id;
+            const transactions = yield (0, dashboard_service_1.GetTransactionService)(organizer_id);
             res.status(200).json({
                 message: "Transactions retrieved successfully",
                 data: transactions,
@@ -88,9 +88,9 @@ function GetTransactionsController(req, res, next) {
 function GetEventDetailsController(req, res, next) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            const organizerId = req.user.id;
-            const eventId = req.params.id;
-            const eventDetails = yield (0, dashboard_service_1.GetEventDetailsService)(eventId, organizerId);
+            const organizer_id = req.user.id;
+            const event_id = req.params.id;
+            const eventDetails = yield (0, dashboard_service_1.GetEventDetailsService)(event_id, organizer_id);
             res.status(200).json({
                 message: "Event details retrieved successfully",
                 data: eventDetails,
@@ -107,10 +107,10 @@ function GetEventDetailsController(req, res, next) {
 function UpdateEventController(req, res, next) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            const organizerId = req.user.id;
-            const eventId = req.params.id;
-            const updateData = req.body;
-            const updatedEvent = yield (0, dashboard_service_1.UpdateEventService)(eventId, organizerId, updateData);
+            const organizer_id = req.user.id;
+            const event_id = req.params.id;
+            const update_data = req.body;
+            const updatedEvent = yield (0, dashboard_service_1.UpdateEventService)(event_id, organizer_id, update_data);
             res.status(200).json({
                 message: "Event updated successfully",
                 data: updatedEvent,
@@ -124,15 +124,15 @@ function UpdateEventController(req, res, next) {
 function UpdateEventImageController(req, res, next) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            const organizerId = req.user.id;
-            const eventId = req.params.id;
+            const organizer_id = req.user.id;
+            const event_id = req.params.id;
             const file = req.file;
             if (!file) {
                 throw new Error("No file was provided");
             }
             const updatedEvent = yield (0, dashboard_service_1.UpdateEventImageService)({
-                organizerId,
-                eventId,
+                organizer_id,
+                event_id,
                 file,
             });
             res.status(200).json({

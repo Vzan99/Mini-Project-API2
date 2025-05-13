@@ -13,7 +13,6 @@ import {
   generateUniqueReferralCode,
   findUserByReferralCode,
 } from "../utils/refferalcode";
-import Handlebars from "handlebars";
 
 import { findUserByEmail, findUserByUsername } from "../helper/userFinder";
 
@@ -28,7 +27,7 @@ const registrationEmailTemplate = `
   <body>
     <div style="font-family: sans-serif; color: #333;">
       <h2 style="color: #4F46E5;">Welcome to Ticket 🎫</h2>
-      <p>Hi {{username}},</p>
+      <p>Hi USERNAME_PLACEHOLDER,</p>
       <p>Thank you for registering! Your account has been successfully created.</p>
       <p>Start exploring events, book your tickets, and be part of the
         experiences that matter.</p>
@@ -143,15 +142,16 @@ async function RegisterService(param: IRegisterParam) {
       return newUser;
     });
 
-    const compiledEmailTemplate = Handlebars.compile(registrationEmailTemplate);
-    const htmlContent = compiledEmailTemplate({
-      username: param.username || "there",
-    });
+    // Ganti placeholder username dengan nilai sebenarnya
+    const htmlContent = registrationEmailTemplate.replace(
+      "USERNAME_PLACEHOLDER",
+      param.username || "there"
+    );
 
     await transporter.sendMail({
       from: '"Ticket Admin" <no-reply@yourdomain.com>',
       to: param.email,
-      subject: "🎉 Registration Successful — Welcome to Ticket!",
+      subject: "🎉 Registration Successful — Welcome to Quick Ticket!",
       html: htmlContent,
     });
     return user;

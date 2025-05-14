@@ -1,5 +1,5 @@
 import prisma from "../lib/prisma";
-import { transaction_status, Prisma } from "@prisma/client";
+import { transaction_status, Prisma, Ticket } from "@prisma/client";
 import {
   ICreateTransactionParam,
   IPaymentTransactionParam,
@@ -114,7 +114,7 @@ async function CreateTransactionService(param: ICreateTransactionParam) {
   // 5. Determine initial status & expiration
   let status: transaction_status;
   let expiresAt: Date;
-  if (event.price === 0) {
+  if (finalAmount === 0) {
     status = transaction_status.confirmed;
     expiresAt = now; // immediate
   } else {
@@ -188,55 +188,83 @@ async function PaymentTransactionService({
   file,
 }: IPaymentTransactionParam) {
   let url = "";
+
   try {
-    // 1. Get the transaction
     const tx = await prisma.transaction.findUnique({
-      where: { id: id },
+      where: { id },
+      include: {
+        event: true,
+        tickets: true,
+      },
     });
 
-    if (!tx) {
-      throw new Error("Transaction not found");
-    }
+    if (!tx) throw new Error("Transaction not found");
 
-    // 2. Check ownership
     if (tx.user_id !== user_id) {
       throw new Error("You are not authorized to confirm this transaction");
     }
 
-    // 3. Must be in the correct status
+    if (
+      tx.total_pay_amount === 0 &&
+      tx.status === transaction_status.confirmed
+    ) {
+      if (tx.tickets.length === 0) {
+        const createdTickets: Ticket[] = [];
+
+        await prisma.$transaction(async (txClient) => {
+          for (let i = 0; i < tx.quantity; i++) {
+            const ticketCode = randomBytes(8).toString("hex").toUpperCase();
+
+            const ticket = await txClient.ticket.create({
+              data: {
+                ticket_code: ticketCode,
+                event_id: tx.event_id,
+                user_id: tx.user_id,
+                transaction_id: tx.id,
+              },
+            });
+
+            createdTickets.push(ticket);
+          }
+        });
+
+        return {
+          ...tx,
+          message: "Tickets created for free transaction",
+          tickets: createdTickets,
+        };
+      }
+
+      return {
+        ...tx,
+        message: "Tickets already created for this free transaction",
+        tickets: tx.tickets,
+      };
+    }
+
     if (tx.status !== transaction_status.waiting_for_payment) {
       throw new Error("Transaction is not awaiting payment");
     }
 
-    // 4. Check if expired
     if (tx.expires_at && tx.expires_at < new Date()) {
       await prisma.transaction.update({
-        where: { id: id },
+        where: { id },
         data: { status: transaction_status.expired },
       });
-
       throw new Error("Transaction has expired");
     }
 
-    // 5. Upload to Cloudinary
     const { secure_url } = await cloudinaryUpload(file);
     url = secure_url;
-    const splitUrl = secure_url.split("/");
-    const fileName = splitUrl[splitUrl.length - 1];
+    const fileName = secure_url.split("/").pop();
 
-    // 6. Wrap database update inside $transaction
-    const updatedTx = await prisma.$transaction(async (txClient) => {
-      // Update transaction with payment proof and status inside the transaction
-      const updatedTransaction = await txClient.transaction.update({
-        where: { id: id },
-        data: {
-          payment_proof: fileName, // Save the secure URL in the database
-          status: transaction_status.waiting_for_admin_confirmation,
-          updated_at: new Date(),
-        },
-      });
-
-      return updatedTransaction;
+    const updatedTx = await prisma.transaction.update({
+      where: { id },
+      data: {
+        payment_proof: fileName,
+        status: transaction_status.waiting_for_admin_confirmation,
+        updated_at: new Date(),
+      },
     });
 
     return updatedTx;

@@ -175,6 +175,29 @@ async function CreateTransactionService(param: ICreateTransactionParam) {
       });
     }
 
+    // 6f. Immediately create tickets if the event is free
+    if (event.price === 0) {
+      const tickets = [];
+      for (let i = 0; i < quantity; i++) {
+        // Generate random ticket code
+        const ticketCode = randomBytes(8).toString("hex").toUpperCase();
+        
+        const ticket = await tx.ticket.create({
+          data: {
+            ticket_code: ticketCode,
+            event_id: event_id,
+            user_id: user_id,
+            transaction_id: transaction.id,
+          },
+        });
+        
+        tickets.push(ticket);
+      }
+      
+      // Return transaction with tickets for free events
+      return { ...transaction, tickets };
+    }
+
     return transaction;
   });
 

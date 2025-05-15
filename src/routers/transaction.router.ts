@@ -5,6 +5,7 @@ import {
   EOActionTransactionController,
   GetUserTicketsController,
   GetTransactionByIdController,
+  GenerateFreeTicketController,
 } from "../controllers/transaction.controller";
 import { Multer } from "../utils/multer";
 import ParamValidator from "../middlewares/paramValidator.middleware"; // Custom param validator
@@ -16,6 +17,7 @@ import {
   TransactionIdParamSchema,
 } from "../schemas/transaction.schema"; // Import schemas
 import { TokenVerification } from "../middlewares/auth.middleware";
+import { GenerateFreeTicketService } from "../services/transaction.service";
 
 const router = Router();
 
@@ -54,6 +56,12 @@ router.post(
   ParamValidator(PaymentParamSchema), // Validate id param
   Multer().single("payment_proof"), // Handle file upload
   PaymentTransactionController
+);
+
+router.post(
+  "/:id/generate-free-tickets",
+  TokenVerification,
+  GenerateFreeTicketController
 );
 
 export default router;

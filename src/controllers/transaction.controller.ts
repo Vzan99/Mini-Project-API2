@@ -5,6 +5,7 @@ import {
   EOActionTransactionService,
   GetUserTicketsService,
   GetTransactionByIdService,
+  GenerateFreeTicketService,
 } from "../services/transaction.service";
 
 async function CreateTransactionController(
@@ -144,10 +145,31 @@ async function GetTransactionByIdController(
   }
 }
 
+async function GenerateFreeTicketController(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const { id } = req.params;
+    const user_id = req.user.id;
+
+    const result = await GenerateFreeTicketService(id, user_id);
+
+    res.status(200).json({
+      message: "Free Ticket Created Successfully",
+      data: result.tickets,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export {
   CreateTransactionController,
   PaymentTransactionController,
   EOActionTransactionController,
   GetUserTicketsController,
   GetTransactionByIdController,
+  GenerateFreeTicketController,
 };

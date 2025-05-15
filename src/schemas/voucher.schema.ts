@@ -18,11 +18,16 @@ export const CreateVoucherSchema = z
       .int()
       .positive({ message: "Max usage must be greater than zero" }),
 
-    voucher_start_date: z.coerce
-      .date()
-      .refine((date) => date.getTime() >= Date.now() - 1000, {
-        message: "Voucher start date cannot be in the past",
-      }),
+    voucher_start_date: z.coerce.date().refine(
+      (date) => {
+        const twoDaysAgo = new Date();
+        twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+        return date.getTime() >= twoDaysAgo.getTime();
+      },
+      {
+        message: "Voucher start date cannot be more than 2 days in the past",
+      }
+    ),
 
     voucher_end_date: z.coerce.date(),
   })

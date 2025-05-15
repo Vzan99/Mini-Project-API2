@@ -15,7 +15,7 @@ export const CreateTransactionSchema = z
     payment_method: z.string().min(1, "Payment method is required"), // Changed from enum to string
     voucher_id: z.string().uuid("Invalid voucher ID format").optional(),
     coupon_id: z.string().uuid("Invalid coupon ID format").optional(),
-    points_id: z.string().uuid("Invalid points ID format").optional(),
+    points_used: z.number().int().positive().optional(),
   })
   .refine((data) => !(data.voucher_id && data.coupon_id), {
     message: "You can only use either a voucher or a coupon, not both",

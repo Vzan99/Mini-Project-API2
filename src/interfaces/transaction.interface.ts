@@ -8,7 +8,7 @@ export interface ICreateTransactionParam {
   payment_method: string; // The payment method (creditCard, bankTransfer, eWallet)
   coupon_id?: string; // Optional: Coupon ID for applying discounts
   voucher_id?: string; // Optional: Voucher ID for applying discounts
-  points_id?: string; // Optional: Points ID for applying discounts
+  points_used?: number; // Optional: Points ID for applying discounts
 }
 
 export interface IPaymentTransactionParam {

@@ -19,19 +19,17 @@ async function CreateTransactionService(param: ICreateTransactionParam) {
     user_id,
     event_id,
     quantity,
-    attend_date, // This is already a Date object
+    attend_date,
     payment_method,
     coupon_id,
     voucher_id,
-    points_id,
+    points_used,
   } = param;
 
-  // Check that user doesn't try to use both voucher and coupon
   if (coupon_id && voucher_id) {
     throw new Error("You can only use either a voucher or a coupon, not both");
   }
 
-  // 1. Fetch Event & User
   const [event, user] = await Promise.all([
     prisma.event.findUnique({ where: { id: event_id } }),
     prisma.user.findUnique({ where: { id: user_id } }),
@@ -39,27 +37,24 @@ async function CreateTransactionService(param: ICreateTransactionParam) {
   if (!event) throw new Error("Event not found");
   if (!user) throw new Error("User not found");
 
-  // 2. Check seat availability
   if (event.remaining_seats < quantity) {
     throw new Error("Not enough seats available");
   }
 
-  // 3. Validate attend date is within event dates
   const eventStartDate = new Date(event.start_date);
   const eventEndDate = new Date(event.end_date);
-
   if (attend_date < eventStartDate || attend_date > eventEndDate) {
     throw new Error("Attend date must be within event start and end dates");
   }
 
   const now = new Date();
 
-  // 3. Gather discounts
   let couponDiscount = 0;
   let voucherDiscount = 0;
   let pointsDiscount = 0;
+  let pointsToUse: string[] = [];
 
-  // 3a. Coupon
+  // --- Coupon ---
   if (coupon_id) {
     const coupon = await prisma.coupon.findUnique({ where: { id: coupon_id } });
     if (
@@ -74,7 +69,7 @@ async function CreateTransactionService(param: ICreateTransactionParam) {
     couponDiscount = coupon.discount_amount;
   }
 
-  // 3b. Voucher
+  // --- Voucher ---
   if (voucher_id) {
     const voucher = await prisma.voucher.findUnique({
       where: { id: voucher_id },
@@ -91,40 +86,49 @@ async function CreateTransactionService(param: ICreateTransactionParam) {
     voucherDiscount = voucher.discount_amount;
   }
 
-  // 3c. Points
-  if (points_id) {
-    const points = await prisma.points.findUnique({ where: { id: points_id } });
-    if (
-      !points ||
-      points.user_id !== user_id ||
-      points.is_used ||
-      points.is_expired ||
-      now > points.expires_at
-    ) {
-      throw new Error("Invalid or expired points");
+  // --- Points ---
+  if (points_used && points_used > 0) {
+    const availablePoints = await prisma.points.findMany({
+      where: {
+        user_id,
+        is_used: false,
+        is_expired: false,
+        expires_at: { gt: now },
+      },
+      orderBy: { expires_at: "asc" }, // use oldest points first
+    });
+
+    let totalAvailable = 0;
+    for (const p of availablePoints) {
+      if (totalAvailable >= points_used) break;
+      totalAvailable += p.points_amount;
+      pointsToUse.push(p.id);
     }
-    pointsDiscount = points.points_amount;
+
+    if (totalAvailable < points_used) {
+      throw new Error("Not enough available points");
+    }
+
+    pointsDiscount = points_used;
   }
 
-  // 4. Calculate payment
+  // --- Final pricing ---
   const originalAmount = event.price * quantity;
   const totalDiscount = couponDiscount + voucherDiscount + pointsDiscount;
   const finalAmount = Math.max(0, originalAmount - totalDiscount);
 
-  // 5. Determine initial status & expiration
   let status: transaction_status;
   let expiresAt: Date;
   if (finalAmount === 0) {
     status = transaction_status.confirmed;
-    expiresAt = now; // immediate
+    expiresAt = now;
   } else {
     status = transaction_status.waiting_for_payment;
-    expiresAt = new Date(now.getTime() + 2 * 60 * 60 * 1000); // 2 hours
+    expiresAt = new Date(now.getTime() + 2 * 60 * 60 * 1000);
   }
 
-  // 6. Create transaction + side effects in one atomic call
+  // --- Transaction ---
   const tx = await prisma.$transaction(async (tx) => {
-    // 6a. Create transaction
     const transaction = await tx.transaction.create({
       data: {
         user_id,
@@ -137,19 +141,16 @@ async function CreateTransactionService(param: ICreateTransactionParam) {
         expires_at: expiresAt,
         coupon_id: coupon_id ?? undefined,
         voucher_id: voucher_id ?? undefined,
-        points_id: points_id ?? undefined,
-        attend_date: attend_date,
-        payment_method: payment_method,
+        attend_date,
+        payment_method,
       },
     });
 
-    // 6b. Decrement seats
     await tx.event.update({
       where: { id: event_id },
       data: { remaining_seats: event.remaining_seats - quantity },
     });
 
-    // 6c. Increment coupon usage
     if (coupon_id) {
       await tx.coupon.update({
         where: { id: coupon_id },
@@ -157,7 +158,6 @@ async function CreateTransactionService(param: ICreateTransactionParam) {
       });
     }
 
-    // 6d. Increment voucher usage
     if (voucher_id) {
       await tx.voucher.update({
         where: { id: voucher_id },
@@ -165,13 +165,10 @@ async function CreateTransactionService(param: ICreateTransactionParam) {
       });
     }
 
-    // 6e. Mark points used
-    if (points_id) {
-      await tx.points.update({
-        where: { id: points_id },
-        data: {
-          is_used: true,
-        },
+    if (pointsToUse.length > 0) {
+      await tx.points.updateMany({
+        where: { id: { in: pointsToUse } },
+        data: { is_used: true },
       });
     }
 

@@ -7,16 +7,8 @@ async function CheckCouponValidityController(
   next: NextFunction
 ) {
   try {
-    const { user_id, coupon_code } = req.query;
-
-    if (
-      !user_id ||
-      !coupon_code ||
-      typeof user_id !== "string" ||
-      typeof coupon_code !== "string"
-    ) {
-      throw new Error("User ID and coupon code are required");
-    }
+    const { coupon_code } = req.query as { coupon_code: string };
+    const user_id = req.user.id as string;
 
     const result = await CheckCouponValidityService(user_id, coupon_code);
 

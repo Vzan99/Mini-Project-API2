@@ -19,6 +19,7 @@ exports.AutoExpireTransactionService = AutoExpireTransactionService;
 exports.AutoCancelTransactionService = AutoCancelTransactionService;
 exports.GetUserTicketsService = GetUserTicketsService;
 exports.GetTransactionByIdService = GetTransactionByIdService;
+exports.GenerateFreeTicketService = GenerateFreeTicketService;
 const prisma_1 = __importDefault(require("../lib/prisma"));
 const client_1 = require("@prisma/client");
 const cloudinary_1 = require("../utils/cloudinary");
@@ -102,7 +103,7 @@ function CreateTransactionService(param) {
         // 5. Determine initial status & expiration
         let status;
         let expiresAt;
-        if (event.price === 0) {
+        if (finalAmount === 0) {
             status = client_1.transaction_status.confirmed;
             expiresAt = now; // immediate
         }
@@ -627,5 +628,48 @@ function GetTransactionByIdService(transactionId, userId) {
         catch (err) {
             throw err;
         }
+    });
+}
+function GenerateFreeTicketService(id, user_id) {
+    return __awaiter(this, void 0, void 0, function* () {
+        // Find transaction including tickets
+        const tx = yield prisma_1.default.transaction.findUnique({
+            where: { id },
+            include: { tickets: true },
+        });
+        if (!tx)
+            throw new Error("Transaction not found");
+        if (tx.user_id !== user_id)
+            throw new Error("Forbidden: Not your transaction");
+        if (tx.total_pay_amount !== 0)
+            throw new Error("This service is only for free transactions");
+        if (tx.status !== client_1.transaction_status.confirmed)
+            throw new Error("Transaction must be confirmed to generate tickets");
+        if (tx.tickets.length > 0) {
+            return {
+                message: "Tickets already created for this free transaction",
+                tickets: tx.tickets,
+            };
+        }
+        const createdTickets = [];
+        yield prisma_1.default.$transaction((txClient) => __awaiter(this, void 0, void 0, function* () {
+            console.log("Quantity:", tx.quantity);
+            for (let i = 0; i < tx.quantity; i++) {
+                const ticketCode = (0, crypto_1.randomBytes)(8).toString("hex").toUpperCase();
+                const ticket = yield txClient.ticket.create({
+                    data: {
+                        ticket_code: ticketCode,
+                        event_id: tx.event_id,
+                        user_id: tx.user_id,
+                        transaction_id: tx.id,
+                    },
+                });
+                createdTickets.push(ticket);
+            }
+        }));
+        return {
+            message: "Tickets created for free transaction",
+            tickets: createdTickets,
+        };
     });
 }

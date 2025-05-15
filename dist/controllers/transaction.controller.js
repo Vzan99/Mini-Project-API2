@@ -14,6 +14,7 @@ exports.PaymentTransactionController = PaymentTransactionController;
 exports.EOActionTransactionController = EOActionTransactionController;
 exports.GetUserTicketsController = GetUserTicketsController;
 exports.GetTransactionByIdController = GetTransactionByIdController;
+exports.GenerateFreeTicketController = GenerateFreeTicketController;
 const transaction_service_1 = require("../services/transaction.service");
 function CreateTransactionController(req, res, next) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -119,6 +120,22 @@ function GetTransactionByIdController(req, res, next) {
             res.status(200).json({
                 message: "Transaction retrieved successfully",
                 data: transaction,
+            });
+        }
+        catch (err) {
+            next(err);
+        }
+    });
+}
+function GenerateFreeTicketController(req, res, next) {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            const { id } = req.params;
+            const user_id = req.user.id;
+            const result = yield (0, transaction_service_1.GenerateFreeTicketService)(id, user_id);
+            res.status(200).json({
+                message: "Free Ticket Created Successfully",
+                data: result.tickets,
             });
         }
         catch (err) {

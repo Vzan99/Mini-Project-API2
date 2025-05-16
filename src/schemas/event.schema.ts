@@ -6,7 +6,7 @@ export const createEventSchema = z
     name: z
       .string()
       .min(1, "Event name is required")
-      .max(100, "Event name is too long"),
+      .max(50, "Event name is too long"),
 
     start_date: z.coerce
       .date({
@@ -48,10 +48,27 @@ export const createEventSchema = z
       errorMap: () => ({ message: "Invalid event category" }),
     }),
   })
-  .refine((data) => data.end_date > data.start_date, {
-    message: "End date must come after start date",
-    path: ["endDate"],
-  });
+  .refine(
+    (data) => {
+      const start = data.start_date;
+      const end = data.end_date;
+
+      const startDay = start.toISOString().split("T")[0];
+      const endDay = end.toISOString().split("T")[0];
+
+      if (startDay === endDay) {
+        // If same calendar day, end time must be after start time
+        return end.getTime() > start.getTime();
+      } else {
+        // If different days, allow end_date >= start_date (so just check >=)
+        return end.getTime() >= start.getTime();
+      }
+    },
+    {
+      message: "End time must be after start time if on the same day",
+      path: ["end_date"],
+    }
+  );
 
 export const searchEventSchema = z.object({
   query: z.string().min(1, "Search query is required"),
@@ -120,8 +137,8 @@ export const filterEventSchema = z
       return true;
     },
     {
-      message: "startDate must be before endDate",
-      path: ["endDate"],
+      message: "start_date must be before end_date",
+      path: ["end_date"],
     }
   );
 

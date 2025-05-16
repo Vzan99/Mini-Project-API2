@@ -1,5 +1,6 @@
 import prisma from "../lib/prisma";
 import { ICreateVoucher } from "../interfaces/voucher.interface";
+import { ZodError } from "zod";
 
 async function CreateVoucherService(param: ICreateVoucher) {
   try {
@@ -12,7 +13,7 @@ async function CreateVoucherService(param: ICreateVoucher) {
       max_usage,
     } = param;
 
-    // Validation
+    // --- Basic format and value validation ---
     if (
       !voucher_code ||
       voucher_code.trim() === "" ||
@@ -31,20 +32,31 @@ async function CreateVoucherService(param: ICreateVoucher) {
       throw new Error("Max usage must be greater than zero.");
     }
 
-    if (voucher_end_date <= voucher_start_date) {
-      throw new Error("Voucher end date must be after start date.");
+    // --- Time-based validation ---
+    const now = new Date();
+
+    // 1. Start date must be today at or after 00:00 local time
+    const todayMidnight = new Date();
+    todayMidnight.setHours(0, 0, 0, 0);
+    if (voucher_start_date < todayMidnight) {
+      throw new Error("Voucher start time must be today at 00:00 or later.");
     }
 
-    // Allow voucher start date to be up to 2 days in the past
-    const twoDaysAgo = new Date();
-    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
-    if (new Date(voucher_start_date) < twoDaysAgo) {
+    // 2. End date must not be in the past
+    if (voucher_end_date < now) {
+      throw new Error("Voucher end date cannot be in the past.");
+    }
+
+    // 3. If start and end are the same day, end time must be after start time
+    const sameDay =
+      voucher_start_date.toDateString() === voucher_end_date.toDateString();
+    if (sameDay && voucher_end_date.getTime() <= voucher_start_date.getTime()) {
       throw new Error(
-        "Voucher start date cannot be more than 2 days in the past."
+        "If start and end are on the same day, end time must be after start time."
       );
     }
 
-    // Check if the voucher code already exists for the event
+    // --- Check for duplicate voucher code for the same event ---
     const isExist = await prisma.voucher.findFirst({
       where: {
         event_id: event_id,
@@ -56,54 +68,57 @@ async function CreateVoucherService(param: ICreateVoucher) {
       throw new Error("Voucher code already exists.");
     }
 
-    // Fetch the event to ensure it exists
-    const event = await prisma.event.findUnique({
-      where: { id: event_id },
-    });
-
+    // --- Check event ---
+    const event = await prisma.event.findUnique({ where: { id: event_id } });
     if (!event) {
       throw new Error("Event not found.");
     }
 
-    // Check if the voucher discount is greater than the event price
+    // Discount amount can't exceed event price
     if (discount_amount > event.price) {
       throw new Error(
         "Voucher discount cannot be greater than the event price."
       );
     }
 
-    // Check if voucher end date is after event end date
+    // Voucher end date must not exceed event end date
     if (voucher_end_date > event.end_date) {
       throw new Error("Voucher end date cannot be after the event end date.");
     }
 
-    // Check if max usage exceeds total event seats
+    // Max usage must not exceed total seats
     if (max_usage > event.total_seats) {
       throw new Error(
         "Max usage cannot exceed the total number of event seats."
       );
     }
 
-    // Check if the voucher is already expired
-    if (new Date() > voucher_end_date) {
-      throw new Error("Voucher has expired.");
+    // Redundant after above, but left in case of timing conflict
+    if (now > voucher_end_date) {
+      throw new Error("Voucher has already expired.");
     }
 
-    // Create the voucher
+    // --- Create the voucher ---
     const voucher = await prisma.voucher.create({
       data: {
-        event_id: event_id,
-        voucher_code: voucher_code,
-        discount_amount: discount_amount,
-        voucher_start_date: voucher_start_date,
-        voucher_end_date: voucher_end_date,
-        max_usage: max_usage,
-        usage_amount: 0, // Initially no usage
+        event_id,
+        voucher_code,
+        discount_amount,
+        voucher_start_date,
+        voucher_end_date,
+        max_usage,
+        usage_amount: 0,
       },
     });
 
     return voucher;
   } catch (err) {
+    if (err instanceof ZodError) {
+      console.error("Validation failed:", err.errors);
+      throw new Error("Validation failed");
+    }
+
+    console.error("Unexpected error:", err);
     throw err;
   }
 }

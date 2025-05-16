@@ -35,13 +35,6 @@ async function CreateVoucherService(param: ICreateVoucher) {
     // --- Time-based validation ---
     const now = new Date();
 
-    // 1. Start date must be today at or after 00:00 local time
-    const todayMidnight = new Date();
-    todayMidnight.setHours(0, 0, 0, 0);
-    if (voucher_start_date < todayMidnight) {
-      throw new Error("Voucher start time must be today at 00:00 or later.");
-    }
-
     // 2. End date must not be in the past
     if (voucher_end_date < now) {
       throw new Error("Voucher end date cannot be in the past.");

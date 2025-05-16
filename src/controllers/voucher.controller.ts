@@ -16,6 +16,7 @@ async function CreateVoucherController(
       data,
     });
   } catch (err) {
+    console.error("■ [/vouchers] Service error:", err);
     next(err);
   }
 }

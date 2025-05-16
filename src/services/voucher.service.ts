@@ -32,14 +32,6 @@ async function CreateVoucherService(param: ICreateVoucher) {
       throw new Error("Max usage must be greater than zero.");
     }
 
-    // --- Time-based validation ---
-    const now = new Date();
-
-    // 2. End date must not be in the past
-    if (voucher_end_date < now) {
-      throw new Error("Voucher end date cannot be in the past.");
-    }
-
     // 3. If start and end are the same day, end time must be after start time
     const sameDay =
       voucher_start_date.toDateString() === voucher_end_date.toDateString();
@@ -84,11 +76,6 @@ async function CreateVoucherService(param: ICreateVoucher) {
       throw new Error(
         "Max usage cannot exceed the total number of event seats."
       );
-    }
-
-    // Redundant after above, but left in case of timing conflict
-    if (now > voucher_end_date) {
-      throw new Error("Voucher has already expired.");
     }
 
     // --- Create the voucher ---

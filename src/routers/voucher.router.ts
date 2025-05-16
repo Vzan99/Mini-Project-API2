@@ -15,6 +15,12 @@ const router = Router();
 
 router.post(
   "/",
+  (req, res, next) => {
+    // ← new middleware
+    console.log("→ [POST /vouchers] headers:", req.headers);
+    console.log("→ [POST /vouchers] body:", req.body);
+    next();
+  },
   TokenVerification,
   ReqValidator(CreateVoucherSchema),
   CreateVoucherController

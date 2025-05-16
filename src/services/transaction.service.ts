@@ -637,7 +637,6 @@ async function GetTransactionByIdService(
   userId: string
 ) {
   try {
-    // Find the transaction with the given ID
     const transaction = await prisma.transaction.findUnique({
       where: { id: transactionId },
       include: {
@@ -666,6 +665,24 @@ async function GetTransactionByIdService(
           },
         },
         tickets: true,
+        voucher: {
+          select: {
+            voucher_code: true,
+            discount_amount: true,
+          },
+        },
+        coupon: {
+          select: {
+            coupon_code: true,
+            discount_amount: true,
+          },
+        },
+        points: {
+          select: {
+            id: true,
+            points_amount: true,
+          },
+        },
       },
     });
 
@@ -673,8 +690,6 @@ async function GetTransactionByIdService(
       throw new Error("Transaction not found");
     }
 
-    // Check if the user is authorized to view this transaction
-    // Either the user owns the transaction or is the event organizer
     if (
       transaction.user_id !== userId &&
       transaction.event.organizer_id !== userId
@@ -682,7 +697,35 @@ async function GetTransactionByIdService(
       throw new Error("You are not authorized to view this transaction");
     }
 
-    return transaction;
+    const discounts = [];
+
+    if (transaction.voucher) {
+      discounts.push({
+        type: "voucher",
+        code: transaction.voucher.voucher_code,
+        amount: transaction.voucher.discount_amount,
+      });
+    }
+
+    if (transaction.coupon) {
+      discounts.push({
+        type: "coupon",
+        code: transaction.coupon.coupon_code,
+        amount: transaction.coupon.discount_amount,
+      });
+    }
+
+    if (transaction.points) {
+      discounts.push({
+        type: "points",
+        amount: transaction.points.points_amount,
+      });
+    }
+
+    return {
+      ...transaction,
+      discounts,
+    };
   } catch (err) {
     throw err;
   }

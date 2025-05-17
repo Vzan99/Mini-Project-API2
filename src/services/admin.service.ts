@@ -90,7 +90,7 @@ async function GetCardSectionsService(category_filter?: category) {
       const events = await prisma.event.findMany({
         where: {
           category: category_filter,
-          start_date: { gt: now },
+          end_date: { gt: now },
         },
         orderBy: { start_date: "asc" },
         take: 3,

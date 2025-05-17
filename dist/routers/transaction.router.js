@@ -26,5 +26,5 @@ transaction_controller_1.EOActionTransactionController);
 router.post("/:id/payment", auth_middleware_1.TokenVerification, (0, paramValidator_middleware_1.default)(transaction_schema_1.PaymentParamSchema), // Validate id param
 (0, multer_1.Multer)().single("payment_proof"), // Handle file upload
 transaction_controller_1.PaymentTransactionController);
-router.post("/:id/generate-free-tickets", auth_middleware_1.TokenVerification, transaction_controller_1.GenerateFreeTicketController);
+router.post("/:id/generate-free-tickets", auth_middleware_1.TokenVerification, (0, paramValidator_middleware_1.default)(transaction_schema_1.TransactionIdParamSchema), transaction_controller_1.GenerateFreeTicketController);
 exports.default = router;

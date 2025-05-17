@@ -8,7 +8,7 @@ exports.createEventSchema = zod_1.z
     name: zod_1.z
         .string()
         .min(1, "Event name is required")
-        .max(100, "Event name is too long"),
+        .max(50, "Event name is too long"),
     start_date: zod_1.z.coerce
         .date({
         errorMap: () => ({ message: "Start date must be a valid date" }),
@@ -43,9 +43,22 @@ exports.createEventSchema = zod_1.z
         errorMap: () => ({ message: "Invalid event category" }),
     }),
 })
-    .refine((data) => data.end_date > data.start_date, {
-    message: "End date must come after start date",
-    path: ["endDate"],
+    .refine((data) => {
+    const start = data.start_date;
+    const end = data.end_date;
+    const startDay = start.toISOString().split("T")[0];
+    const endDay = end.toISOString().split("T")[0];
+    if (startDay === endDay) {
+        // If same calendar day, end time must be after start time
+        return end.getTime() > start.getTime();
+    }
+    else {
+        // If different days, allow end_date >= start_date (so just check >=)
+        return end.getTime() >= start.getTime();
+    }
+}, {
+    message: "End time must be after start time if on the same day",
+    path: ["end_date"],
 });
 exports.searchEventSchema = zod_1.z.object({
     query: zod_1.z.string().min(1, "Search query is required"),
@@ -107,8 +120,8 @@ exports.filterEventSchema = zod_1.z
     }
     return true;
 }, {
-    message: "startDate must be before endDate",
-    path: ["endDate"],
+    message: "start_date must be before end_date",
+    path: ["end_date"],
 });
 exports.pastEventsSchema = zod_1.z.object({
     page: zod_1.z.coerce.number().positive().optional().default(1),

@@ -19,6 +19,7 @@ function ReqValidator(schema) {
                     path: e.path,
                     message: e.message,
                 }));
+                console.error("Zod validation error:", details);
                 res.status(400).json({ message: "Validation failed", details });
             }
             else {

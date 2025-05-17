@@ -28,13 +28,10 @@ const nodemailer_1 = require("../utils/nodemailer");
 //Create Transaction (Click "BuyTicket" Button from event details page)
 function CreateTransactionService(param) {
     return __awaiter(this, void 0, void 0, function* () {
-        const { user_id, event_id, quantity, attend_date, // This is already a Date object
-        payment_method, coupon_id, voucher_id, points_id, } = param;
-        // Check that user doesn't try to use both voucher and coupon
+        const { user_id, event_id, quantity, attend_date, payment_method, coupon_id, voucher_id, points_used, } = param;
         if (coupon_id && voucher_id) {
             throw new Error("You can only use either a voucher or a coupon, not both");
         }
-        // 1. Fetch Event & User
         const [event, user] = yield Promise.all([
             prisma_1.default.event.findUnique({ where: { id: event_id } }),
             prisma_1.default.user.findUnique({ where: { id: user_id } }),
@@ -43,22 +40,20 @@ function CreateTransactionService(param) {
             throw new Error("Event not found");
         if (!user)
             throw new Error("User not found");
-        // 2. Check seat availability
         if (event.remaining_seats < quantity) {
             throw new Error("Not enough seats available");
         }
-        // 3. Validate attend date is within event dates
         const eventStartDate = new Date(event.start_date);
         const eventEndDate = new Date(event.end_date);
         if (attend_date < eventStartDate || attend_date > eventEndDate) {
             throw new Error("Attend date must be within event start and end dates");
         }
         const now = new Date();
-        // 3. Gather discounts
         let couponDiscount = 0;
         let voucherDiscount = 0;
         let pointsDiscount = 0;
-        // 3a. Coupon
+        let pointsToUse = [];
+        // --- Coupon ---
         if (coupon_id) {
             const coupon = yield prisma_1.default.coupon.findUnique({ where: { id: coupon_id } });
             if (!coupon ||
@@ -70,7 +65,7 @@ function CreateTransactionService(param) {
             }
             couponDiscount = coupon.discount_amount;
         }
-        // 3b. Voucher
+        // --- Voucher ---
         if (voucher_id) {
             const voucher = yield prisma_1.default.voucher.findUnique({
                 where: { id: voucher_id },
@@ -84,36 +79,45 @@ function CreateTransactionService(param) {
             }
             voucherDiscount = voucher.discount_amount;
         }
-        // 3c. Points
-        if (points_id) {
-            const points = yield prisma_1.default.points.findUnique({ where: { id: points_id } });
-            if (!points ||
-                points.user_id !== user_id ||
-                points.is_used ||
-                points.is_expired ||
-                now > points.expires_at) {
-                throw new Error("Invalid or expired points");
+        // --- Points ---
+        if (points_used && points_used > 0) {
+            const availablePoints = yield prisma_1.default.points.findMany({
+                where: {
+                    user_id,
+                    is_used: false,
+                    is_expired: false,
+                    expires_at: { gt: now },
+                },
+                orderBy: { expires_at: "asc" }, // use oldest points first
+            });
+            let totalAvailable = 0;
+            for (const p of availablePoints) {
+                if (totalAvailable >= points_used)
+                    break;
+                totalAvailable += p.points_amount;
+                pointsToUse.push(p.id);
             }
-            pointsDiscount = points.points_amount;
+            if (totalAvailable < points_used) {
+                throw new Error("Not enough available points");
+            }
+            pointsDiscount = points_used;
         }
-        // 4. Calculate payment
+        // --- Final pricing ---
         const originalAmount = event.price * quantity;
         const totalDiscount = couponDiscount + voucherDiscount + pointsDiscount;
         const finalAmount = Math.max(0, originalAmount - totalDiscount);
-        // 5. Determine initial status & expiration
         let status;
         let expiresAt;
         if (finalAmount === 0) {
             status = client_1.transaction_status.confirmed;
-            expiresAt = now; // immediate
+            expiresAt = now;
         }
         else {
             status = client_1.transaction_status.waiting_for_payment;
-            expiresAt = new Date(now.getTime() + 2 * 60 * 60 * 1000); // 2 hours
+            expiresAt = new Date(now.getTime() + 2 * 60 * 60 * 1000);
         }
-        // 6. Create transaction + side effects in one atomic call
+        // --- Transaction ---
         const tx = yield prisma_1.default.$transaction((tx) => __awaiter(this, void 0, void 0, function* () {
-            // 6a. Create transaction
             const transaction = yield tx.transaction.create({
                 data: {
                     user_id,
@@ -126,37 +130,30 @@ function CreateTransactionService(param) {
                     expires_at: expiresAt,
                     coupon_id: coupon_id !== null && coupon_id !== void 0 ? coupon_id : undefined,
                     voucher_id: voucher_id !== null && voucher_id !== void 0 ? voucher_id : undefined,
-                    points_id: points_id !== null && points_id !== void 0 ? points_id : undefined,
-                    attend_date: attend_date,
-                    payment_method: payment_method,
+                    attend_date,
+                    payment_method,
                 },
             });
-            // 6b. Decrement seats
             yield tx.event.update({
                 where: { id: event_id },
                 data: { remaining_seats: event.remaining_seats - quantity },
             });
-            // 6c. Increment coupon usage
             if (coupon_id) {
                 yield tx.coupon.update({
                     where: { id: coupon_id },
                     data: { use_count: { increment: 1 } },
                 });
             }
-            // 6d. Increment voucher usage
             if (voucher_id) {
                 yield tx.voucher.update({
                     where: { id: voucher_id },
                     data: { usage_amount: { increment: 1 } },
                 });
             }
-            // 6e. Mark points used
-            if (points_id) {
-                yield tx.points.update({
-                    where: { id: points_id },
-                    data: {
-                        is_used: true,
-                    },
+            if (pointsToUse.length > 0) {
+                yield tx.points.updateMany({
+                    where: { id: { in: pointsToUse } },
+                    data: { is_used: true },
                 });
             }
             return transaction;
@@ -583,7 +580,6 @@ function GetUserTicketsService(userId) {
 function GetTransactionByIdService(transactionId, userId) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            // Find the transaction with the given ID
             const transaction = yield prisma_1.default.transaction.findUnique({
                 where: { id: transactionId },
                 include: {
@@ -612,18 +608,55 @@ function GetTransactionByIdService(transactionId, userId) {
                         },
                     },
                     tickets: true,
+                    voucher: {
+                        select: {
+                            voucher_code: true,
+                            discount_amount: true,
+                        },
+                    },
+                    coupon: {
+                        select: {
+                            coupon_code: true,
+                            discount_amount: true,
+                        },
+                    },
+                    points: {
+                        select: {
+                            id: true,
+                            points_amount: true,
+                        },
+                    },
                 },
             });
             if (!transaction) {
                 throw new Error("Transaction not found");
             }
-            // Check if the user is authorized to view this transaction
-            // Either the user owns the transaction or is the event organizer
             if (transaction.user_id !== userId &&
                 transaction.event.organizer_id !== userId) {
                 throw new Error("You are not authorized to view this transaction");
             }
-            return transaction;
+            const discounts = [];
+            if (transaction.voucher) {
+                discounts.push({
+                    type: "voucher",
+                    code: transaction.voucher.voucher_code,
+                    amount: transaction.voucher.discount_amount,
+                });
+            }
+            if (transaction.coupon) {
+                discounts.push({
+                    type: "coupon",
+                    code: transaction.coupon.coupon_code,
+                    amount: transaction.coupon.discount_amount,
+                });
+            }
+            if (transaction.points) {
+                discounts.push({
+                    type: "points",
+                    amount: transaction.points.points_amount,
+                });
+            }
+            return Object.assign(Object.assign({}, transaction), { discounts });
         }
         catch (err) {
             throw err;

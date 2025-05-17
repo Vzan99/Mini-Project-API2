@@ -22,6 +22,7 @@ function CreateVoucherController(req, res, next) {
             });
         }
         catch (err) {
+            console.error("■ [/vouchers] Service error:", err);
             next(err);
         }
     });

@@ -122,7 +122,7 @@ function RegisterService(param) {
                         data: {
                             user_id: newUser.id,
                             coupon_code: `COUP${userReferralCode}`,
-                            discount_amount: 100000, // Example: 50,000 IDR discount
+                            discount_amount: 10000, // Example: 50,000 IDR discount
                             coupon_start_date: new Date(),
                             coupon_end_date: couponExpiryDate,
                             max_usage: 1, // One-time use

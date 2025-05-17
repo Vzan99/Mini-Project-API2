@@ -14,13 +14,8 @@ const coupon_service_1 = require("../services/coupon.service");
 function CheckCouponValidityController(req, res, next) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            const { user_id, coupon_code } = req.query;
-            if (!user_id ||
-                !coupon_code ||
-                typeof user_id !== "string" ||
-                typeof coupon_code !== "string") {
-                throw new Error("User ID and coupon code are required");
-            }
+            const { coupon_code } = req.query;
+            const user_id = req.user.id;
             const result = yield (0, coupon_service_1.CheckCouponValidityService)(user_id, coupon_code);
             res.status(200).json({
                 message: result.message,

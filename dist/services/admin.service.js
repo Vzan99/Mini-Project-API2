@@ -96,7 +96,7 @@ function GetCardSectionsService(category_filter) {
                 const events = yield prisma_1.default.event.findMany({
                     where: {
                         category: category_filter,
-                        start_date: { gt: now },
+                        end_date: { gt: now },
                     },
                     orderBy: { start_date: "asc" },
                     take: 3,

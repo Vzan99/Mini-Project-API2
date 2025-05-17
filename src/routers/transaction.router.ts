@@ -61,6 +61,7 @@ router.post(
 router.post(
   "/:id/generate-free-tickets",
   TokenVerification,
+  ParamValidator(TransactionIdParamSchema),
   GenerateFreeTicketController
 );
 

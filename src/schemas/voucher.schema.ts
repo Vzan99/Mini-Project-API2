@@ -21,14 +21,6 @@ export const CreateVoucherSchema = z.object({
 
   voucher_end_date: z.coerce.date(),
 });
-// .refine(
-//   (data) =>
-//     data.voucher_end_date.getTime() > data.voucher_start_date.getTime(),
-//   {
-//     message: "Voucher end date/time must be after start date/time",
-//     path: ["voucher_end_date"],
-//   }
-// );
 
 export const CheckVoucherSchema = z.object({
   event_id: z.string().uuid({ message: "Invalid event ID" }),

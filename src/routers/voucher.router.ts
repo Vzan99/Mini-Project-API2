@@ -13,20 +13,15 @@ import { TokenVerification } from "../middlewares/auth.middleware";
 
 const router = Router();
 
+// Create a voucher
 router.post(
   "/",
-  (req, res, next) => {
-    // ← new middleware
-    console.log("→ [POST /vouchers] headers:", req.headers);
-    console.log("→ [POST /vouchers] body:", req.body);
-    next();
-  },
   TokenVerification,
   ReqValidator(CreateVoucherSchema),
   CreateVoucherController
 );
 
-// Add the new endpoint for checking voucher validity
+// Check Validity Voucher
 router.get(
   "/check",
   QueryValidator(CheckVoucherSchema),

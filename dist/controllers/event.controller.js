@@ -19,8 +19,7 @@ function CreateEventController(req, res, next) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const organizer_id = req.user.id;
-            const event = yield (0, event_service_1.CreateEventService)(Object.assign(Object.assign({}, req.body), { file: req.file, // Multer-attached file
-                organizer_id }));
+            const event = yield (0, event_service_1.CreateEventService)(Object.assign(Object.assign({}, req.body), { file: req.file, organizer_id }));
             res.status(201).json({
                 message: "Event created successfully",
                 data: event,
@@ -34,7 +33,6 @@ function CreateEventController(req, res, next) {
 function GetEventByIdController(req, res, next) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            // Use the validated params
             const { id } = req.validatedParams;
             const event = yield (0, event_service_1.GetEventByIdService)(id);
             res.status(200).json({
@@ -50,7 +48,6 @@ function GetEventByIdController(req, res, next) {
 function SearchEventsController(req, res, next) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            // Use the validated query parameters with the new name
             const { query, limit } = req.validatedQuery;
             const events = yield (0, event_service_1.SearchEventsService)(query, limit);
             res.status(200).json({
@@ -67,10 +64,7 @@ function SearchEventsController(req, res, next) {
 function FilterEventsController(req, res, next) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            // Since query parameters have already been validated by QueryValidator,
-            // you can just pass them to the service directly.
             const filters = req.validatedQuery;
-            // Call the service to get filtered events
             const events = yield (0, event_service_1.FilterEventsService)(filters);
             // Send response
             res.status(200).json({
@@ -79,7 +73,7 @@ function FilterEventsController(req, res, next) {
             });
         }
         catch (err) {
-            next(err); // Pass the error to the error handling middleware
+            next(err);
         }
     });
 }

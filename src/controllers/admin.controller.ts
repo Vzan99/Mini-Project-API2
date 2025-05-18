@@ -15,10 +15,6 @@ async function GetOrganizerProfileController(
   try {
     const organizer_id = String(req.params.id);
 
-    // if (isNaN(organizerId)) {
-    //   throw new Error("Invalid organizer ID");
-    // }
-
     const profile = await GetOrganizerProfileService(organizer_id);
 
     res.status(200).json({
@@ -65,32 +61,8 @@ async function GetUniqueLocationsController(
   }
 }
 
-//gak kepake
-async function GetUserProfileController(
-  req: Request,
-  res: Response,
-  next: NextFunction
-) {
-  try {
-    // Get user ID from the authenticated user
-    const user_id = req.user?.id;
-
-    if (!user_id) throw new Error("Unauthorized - User not authenticated");
-
-    const userData = await GetUserProfileService(user_id);
-
-    res.status(200).json({
-      message: "User profile retrieved successfully",
-      data: userData,
-    });
-  } catch (err) {
-    next(err);
-  }
-}
-
 export {
   GetOrganizerProfileController,
   GetCardSectionsController,
   GetUniqueLocationsController,
-  GetUserProfileController,
 };

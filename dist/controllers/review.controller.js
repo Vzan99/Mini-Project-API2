@@ -14,7 +14,6 @@ const review_service_1 = require("../services/review.service");
 function CreateReviewController(req, res, next) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            // Get user_id from the authenticated token instead of request body
             const user_id = req.user.id;
             const { event_id, rating, review } = req.body;
             const data = yield (0, review_service_1.CreateReviewService)({

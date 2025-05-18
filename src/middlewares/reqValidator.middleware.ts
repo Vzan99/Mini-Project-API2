@@ -1,14 +1,9 @@
 import { Request, Response, NextFunction } from "express";
 import { ZodTypeAny, ZodError } from "zod";
 
-/**
- * Middleware to validate request bodies against a Zod schema.
- * Accepts any Zod schema (including effects like transforms/refines).
- */
 export default function ReqValidator(schema: ZodTypeAny) {
   return (req: Request, res: Response, next: NextFunction) => {
     try {
-      // parse will throw if invalid, and also apply transforms
       req.body = schema.parse(req.body);
       next();
     } catch (err) {

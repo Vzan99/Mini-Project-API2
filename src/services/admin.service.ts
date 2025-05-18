@@ -25,7 +25,7 @@ async function GetOrganizerProfileService(organizer_id: string) {
       include: {
         review: {
           include: {
-            user: { select: { username: true } }, // reviewer name
+            user: { select: { username: true } },
           },
         },
       },
@@ -57,7 +57,7 @@ async function GetOrganizerProfileService(organizer_id: string) {
       },
       average_rating,
       total_reviews: allReviews.length,
-      reviews: allReviews, // Now includes event_name and event_id
+      reviews: allReviews,
       events: events.map((e) => ({
         id: e.id,
         name: e.name,
@@ -104,7 +104,6 @@ async function GetCardSectionsService(category_filter?: category) {
         },
       });
 
-      // Return just the array of events
       return events;
     }
     // If no category filter, return events grouped by category

@@ -7,7 +7,6 @@ async function CreateReviewController(
   next: NextFunction
 ) {
   try {
-    // Get user_id from the authenticated token instead of request body
     const user_id = req.user.id;
     const { event_id, rating, review } = req.body;
 

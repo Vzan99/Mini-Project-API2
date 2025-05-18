@@ -45,19 +45,18 @@ async function CreateEventService(param: ICreateEventParam) {
         start_date: param.start_date,
         end_date: param.end_date,
         description: param.description,
-        event_image: fileName, // full URL or null
+        event_image: fileName,
         location: param.location,
         price: param.price,
         total_seats: param.total_seats,
         remaining_seats: param.total_seats,
         category: param.category,
-        organizer_id: param.organizer_id, // ID dari user yang terautentikasi
+        organizer_id: param.organizer_id,
       },
     });
 
     return event;
   } catch (err) {
-    // 5) Cleanup Cloudinary if upload succeeded but something else failed
     if (imageUrl) {
       await cloudinaryRemove(imageUrl);
     }
@@ -70,8 +69,8 @@ async function GetEventByIdService(id: string) {
     const event = await prisma.event.findUnique({
       where: { id },
       include: {
-        organizer: true, // Include the organizer's information if necessary
-        transactions: true, // You can include related data like transactions if needed
+        organizer: true,
+        transactions: true,
         voucher: true,
         review: true,
       },
@@ -100,7 +99,7 @@ async function SearchEventsService(searchTerm: string, limit: number = 10) {
       },
       take: limit,
       orderBy: {
-        start_date: "asc", // Sort by upcoming events first
+        start_date: "asc",
       },
       include: {
         organizer: {
@@ -203,8 +202,8 @@ async function FilterEventsService(filters: FilterParams) {
 
       // Find events that overlap with this day
       whereClause.AND = [
-        { start_date: { lte: endOfDay } }, // Event starts before or at the end of the day
-        { end_date: { gte: startOfDay } }, // Event ends after or at the start of the day
+        { start_date: { lte: endOfDay } },
+        { end_date: { gte: startOfDay } },
       ];
     } else {
       // Use existing date range filters only if specificDate is not provided
@@ -223,8 +222,8 @@ async function FilterEventsService(filters: FilterParams) {
     }
 
     // Sorting by field (e.g., name, price, start_date)
-    const sortBy = filters.sort_by || "start_date"; // Default sort by start_date
-    const sortOrder = filters.sort_order || "asc"; // Default sort order is ascending
+    const sortBy = filters.sort_by || "start_date";
+    const sortOrder = filters.sort_order || "asc";
 
     // Validate sortBy field
     const validSortFields = ["name", "price", "start_date", "location"];
@@ -264,7 +263,6 @@ async function FilterEventsService(filters: FilterParams) {
       },
     });
 
-    // Handle no results found
     if (events.length === 0) {
       return {
         events: [],
@@ -346,7 +344,7 @@ async function GetPastEventsService(
           include: {
             tickets: true,
           },
-          take: 1, // We only need one confirmed transaction
+          take: 1,
         },
       },
       orderBy: {

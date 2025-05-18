@@ -6,7 +6,7 @@ import { TokenVerification } from "../middlewares/auth.middleware";
 
 const router = Router();
 
-// POST /reviews - now with token verification
+// Create a review
 router.post(
   "/",
   TokenVerification,

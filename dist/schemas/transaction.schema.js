@@ -14,7 +14,7 @@ exports.CreateTransactionSchema = zod_1.z
         required_error: "Attend date is required",
         invalid_type_error: "Attend date must be a valid date",
     }),
-    payment_method: zod_1.z.string().min(1, "Payment method is required"), // Changed from enum to string
+    payment_method: zod_1.z.string().min(1, "Payment method is required"),
     voucher_id: zod_1.z.string().uuid("Invalid voucher ID format").optional(),
     coupon_id: zod_1.z.string().uuid("Invalid coupon ID format").optional(),
     points_used: zod_1.z.number().int().positive().optional(),
@@ -32,7 +32,7 @@ exports.EOActionSchema = zod_1.z.object({
     }),
 });
 exports.PaymentParamSchema = zod_1.z.object({
-    id: zod_1.z.string().uuid(), // From req.params
+    id: zod_1.z.string().uuid(),
 });
 exports.QRISPaymentSchema = zod_1.z.object({
     user_id: zod_1.z.string().uuid("Invalid user ID format"),

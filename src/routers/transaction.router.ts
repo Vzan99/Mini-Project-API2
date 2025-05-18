@@ -21,15 +21,15 @@ import { GenerateFreeTicketService } from "../services/transaction.service";
 
 const router = Router();
 
-// Customer makes a transaction (body validated)
+// Create a transaction
 router.post(
   "/",
   TokenVerification,
-  ReqValidator(CreateTransactionSchema), // Validate body using schema
+  ReqValidator(CreateTransactionSchema),
   CreateTransactionController
 );
 
-// Get user's tickets (must come before /:transactionId route)
+// Get user's tickets
 router.get("/tickets", TokenVerification, GetUserTicketsController);
 
 // Get transaction by ID
@@ -40,24 +40,25 @@ router.get(
   GetTransactionByIdController
 );
 
-// EO Action (param and body validated)
+// EO Action
 router.post(
   "/:id/action",
   TokenVerification,
-  ParamValidator(EOActionSchema.pick({ id: true })), // Validate transactionId param
-  ReqValidator(EOActionSchema.pick({ action: true })), // Validate action in body
+  ParamValidator(EOActionSchema.pick({ id: true })),
+  ReqValidator(EOActionSchema.pick({ action: true })),
   EOActionTransactionController
 );
 
-// Customer uploads payment proof (param validated, file upload after)
+// Customer uploads payment proof
 router.post(
   "/:id/payment",
   TokenVerification,
-  ParamValidator(PaymentParamSchema), // Validate id param
-  Multer().single("payment_proof"), // Handle file upload
+  ParamValidator(PaymentParamSchema),
+  Multer().single("payment_proof"),
   PaymentTransactionController
 );
 
+// Generate free tickets
 router.post(
   "/:id/generate-free-tickets",
   TokenVerification,

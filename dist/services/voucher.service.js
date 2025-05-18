@@ -20,7 +20,6 @@ function CreateVoucherService(param) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const { event_id, voucher_code, discount_amount, voucher_start_date, voucher_end_date, max_usage, } = param;
-            // --- Basic format and value validation ---
             if (!voucher_code ||
                 voucher_code.trim() === "" ||
                 voucher_code.length < 5) {
@@ -32,7 +31,7 @@ function CreateVoucherService(param) {
             if (max_usage <= 0) {
                 throw new Error("Max usage must be greater than zero.");
             }
-            // 3. If start and end are the same day, end time must be after start time
+            //If start and end are the same day, end time must be after start time
             const sameDay = voucher_start_date.toDateString() === voucher_end_date.toDateString();
             if (sameDay && voucher_end_date.getTime() <= voucher_start_date.getTime()) {
                 throw new Error("If start and end are on the same day, end time must be after start time.");
@@ -47,7 +46,6 @@ function CreateVoucherService(param) {
             if (isExist) {
                 throw new Error("Voucher code already exists.");
             }
-            // --- Check event ---
             const event = yield prisma_1.default.event.findUnique({ where: { id: event_id } });
             if (!event) {
                 throw new Error("Event not found.");
@@ -64,7 +62,7 @@ function CreateVoucherService(param) {
             if (max_usage > event.total_seats) {
                 throw new Error("Max usage cannot exceed the total number of event seats.");
             }
-            // --- Create the voucher ---
+            // Create the vouche
             const voucher = yield prisma_1.default.voucher.create({
                 data: {
                     event_id,
@@ -98,7 +96,6 @@ function CheckVoucherValidityService(event_id, voucher_code) {
                     voucher_code: voucher_code,
                 },
             });
-            // If voucher doesn't exist
             if (!voucher) {
                 return {
                     is_valid: false,
@@ -138,7 +135,6 @@ function CheckVoucherValidityService(event_id, voucher_code) {
                     message: "Event not found",
                 };
             }
-            // Voucher is valid
             return {
                 is_valid: true,
                 message: "Voucher is valid",

@@ -12,9 +12,3 @@ export interface ICreateEventParam {
   category: category;
   organizer_id: string;
 }
-
-//hanya untuk exercise upload foto
-export interface IUpdateEventImage {
-  file: Express.Multer.File;
-  // eventId: int;
-}

@@ -17,8 +17,8 @@ async function CreateEventController(
 
     const event = await CreateEventService({
       ...req.body,
-      file: req.file, // Multer-attached file
-      organizer_id, // alwi: menambahkan userid
+      file: req.file, 
+      organizer_id, 
     });
 
     res.status(201).json({
@@ -36,7 +36,6 @@ async function GetEventByIdController(
   next: NextFunction
 ) {
   try {
-    // Use the validated params
     const { id } = (req as any).validatedParams;
 
     const event = await GetEventByIdService(id);
@@ -56,7 +55,6 @@ async function SearchEventsController(
   next: NextFunction
 ) {
   try {
-    // Use the validated query parameters with the new name
     const { query, limit } = (req as any).validatedQuery;
 
     const events = await SearchEventsService(query, limit);
@@ -77,11 +75,9 @@ async function FilterEventsController(
   next: NextFunction
 ) {
   try {
-    // Since query parameters have already been validated by QueryValidator,
-    // you can just pass them to the service directly.
+
     const filters = (req as any).validatedQuery;
 
-    // Call the service to get filtered events
     const events = await FilterEventsService(filters);
 
     // Send response
@@ -90,7 +86,7 @@ async function FilterEventsController(
       events,
     });
   } catch (err) {
-    next(err); // Pass the error to the error handling middleware
+    next(err); 
   }
 }
 

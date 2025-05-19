@@ -18,14 +18,6 @@ exports.CreateVoucherSchema = zod_1.z.object({
     voucher_start_date: zod_1.z.coerce.date(),
     voucher_end_date: zod_1.z.coerce.date(),
 });
-// .refine(
-//   (data) =>
-//     data.voucher_end_date.getTime() > data.voucher_start_date.getTime(),
-//   {
-//     message: "Voucher end date/time must be after start date/time",
-//     path: ["voucher_end_date"],
-//   }
-// );
 exports.CheckVoucherSchema = zod_1.z.object({
     event_id: zod_1.z.string().uuid({ message: "Invalid event ID" }),
     voucher_code: zod_1.z.string().min(1, { message: "Voucher code is required" }),

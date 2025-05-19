@@ -1,14 +1,14 @@
 import { transaction_status } from "@prisma/client";
 
 export interface ICreateTransactionParam {
-  user_id: string; // The ID of the customer making the purchase
-  event_id: string; // The ID of the event for which they want to buy a ticket
-  quantity: number; // The number of tickets the customer wants to buy
-  attend_date: Date; // The date the customer plans to attend the event (as Date object)
-  payment_method: string; // The payment method (creditCard, bankTransfer, eWallet)
-  coupon_id?: string; // Optional: Coupon ID for applying discounts
-  voucher_id?: string; // Optional: Voucher ID for applying discounts
-  points_used?: number; // Optional: Points ID for applying discounts
+  user_id: string;
+  event_id: string;
+  quantity: number;
+  attend_date: Date;
+  payment_method: string;
+  coupon_id?: string;
+  voucher_id?: string;
+  points_used?: number;
 }
 
 export interface IPaymentTransactionParam {

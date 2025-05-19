@@ -22,7 +22,7 @@ import { RoleChecker } from "../middlewares/roleChecker.middleware";
 
 const router = Router();
 
-// Search events - with query validation
+// Search events
 router.get(
   "/search",
   QueryValidator(searchEventSchema),
@@ -31,9 +31,9 @@ router.get(
 
 // Filter all events by category, location, date, and price using query
 router.get(
-  "/filter", // Endpoint for filtering events
-  QueryValidator(filterEventSchema), // Validate query parameters
-  FilterEventsController // Your controller logic
+  "/filter", 
+  QueryValidator(filterEventSchema), 
+  FilterEventsController
 );
 
 // Get past events that the user has attended
@@ -44,7 +44,7 @@ router.get(
   GetPastEventsController
 );
 
-// Get event by ID - with param validation
+// Get event by ID
 router.get("/:id", ParamValidator(eventIdSchema), GetEventByIdController);
 
 // Create Event

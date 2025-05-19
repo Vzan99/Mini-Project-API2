@@ -41,7 +41,7 @@ function GetOrganizerProfileService(organizer_id) {
                 include: {
                     review: {
                         include: {
-                            user: { select: { username: true } }, // reviewer name
+                            user: { select: { username: true } },
                         },
                     },
                 },
@@ -63,7 +63,7 @@ function GetOrganizerProfileService(organizer_id) {
                 },
                 average_rating,
                 total_reviews: allReviews.length,
-                reviews: allReviews, // Now includes event_name and event_id
+                reviews: allReviews,
                 events: events.map((e) => ({
                     id: e.id,
                     name: e.name,
@@ -109,7 +109,6 @@ function GetCardSectionsService(category_filter) {
                         end_date: true,
                     },
                 });
-                // Return just the array of events
                 return events;
             }
             // If no category filter, return events grouped by category

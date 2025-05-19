@@ -49,11 +49,9 @@ exports.createEventSchema = zod_1.z
     const startDay = start.toISOString().split("T")[0];
     const endDay = end.toISOString().split("T")[0];
     if (startDay === endDay) {
-        // If same calendar day, end time must be after start time
         return end.getTime() > start.getTime();
     }
     else {
-        // If different days, allow end_date >= start_date (so just check >=)
         return end.getTime() >= start.getTime();
     }
 }, {

@@ -25,7 +25,6 @@ const client_1 = require("@prisma/client");
 const cloudinary_1 = require("../utils/cloudinary");
 const crypto_1 = require("crypto");
 const nodemailer_1 = require("../utils/nodemailer");
-//Create Transaction (Click "BuyTicket" Button from event details page)
 function CreateTransactionService(param) {
     return __awaiter(this, void 0, void 0, function* () {
         const { user_id, event_id, quantity, attend_date, payment_method, coupon_id, voucher_id, points_used, } = param;
@@ -53,7 +52,6 @@ function CreateTransactionService(param) {
         let voucherDiscount = 0;
         let pointsDiscount = 0;
         let pointsToUse = [];
-        // --- Coupon ---
         if (coupon_id) {
             const coupon = yield prisma_1.default.coupon.findUnique({ where: { id: coupon_id } });
             if (!coupon ||
@@ -65,7 +63,6 @@ function CreateTransactionService(param) {
             }
             couponDiscount = coupon.discount_amount;
         }
-        // --- Voucher ---
         if (voucher_id) {
             const voucher = yield prisma_1.default.voucher.findUnique({
                 where: { id: voucher_id },
@@ -79,7 +76,6 @@ function CreateTransactionService(param) {
             }
             voucherDiscount = voucher.discount_amount;
         }
-        // --- Points ---
         if (points_used && points_used > 0) {
             const availablePoints = yield prisma_1.default.points.findMany({
                 where: {
@@ -88,7 +84,7 @@ function CreateTransactionService(param) {
                     is_expired: false,
                     expires_at: { gt: now },
                 },
-                orderBy: { expires_at: "asc" }, // use oldest points first
+                orderBy: { expires_at: "asc" },
             });
             let totalAvailable = 0;
             for (const p of availablePoints) {
@@ -102,7 +98,6 @@ function CreateTransactionService(param) {
             }
             pointsDiscount = points_used;
         }
-        // --- Final pricing ---
         const originalAmount = event.price * quantity;
         const totalDiscount = couponDiscount + voucherDiscount + pointsDiscount;
         const finalAmount = Math.max(0, originalAmount - totalDiscount);
@@ -116,7 +111,6 @@ function CreateTransactionService(param) {
             status = client_1.transaction_status.waiting_for_payment;
             expiresAt = new Date(now.getTime() + 2 * 60 * 60 * 1000);
         }
-        // --- Transaction ---
         const tx = yield prisma_1.default.$transaction((tx) => __awaiter(this, void 0, void 0, function* () {
             const transaction = yield tx.transaction.create({
                 data: {
@@ -161,27 +155,22 @@ function CreateTransactionService(param) {
         return tx;
     });
 }
-//Customer upload Payment Proof, and then change the status to "waiting_for_admin_confirmation"
 function PaymentTransactionService(_a) {
     return __awaiter(this, arguments, void 0, function* ({ id, user_id, file, }) {
         let url = "";
         try {
-            // 1. Get the transaction
             const tx = yield prisma_1.default.transaction.findUnique({
                 where: { id: id },
             });
             if (!tx) {
                 throw new Error("Transaction not found");
             }
-            // 2. Check ownership
             if (tx.user_id !== user_id) {
                 throw new Error("You are not authorized to confirm this transaction");
             }
-            // 3. Must be in the correct status
             if (tx.status !== client_1.transaction_status.waiting_for_payment) {
                 throw new Error("Transaction is not awaiting payment");
             }
-            // 4. Check if expired
             if (tx.expires_at && tx.expires_at < new Date()) {
                 yield prisma_1.default.transaction.update({
                     where: { id: id },
@@ -189,18 +178,15 @@ function PaymentTransactionService(_a) {
                 });
                 throw new Error("Transaction has expired");
             }
-            // 5. Upload to Cloudinary
             const { secure_url } = yield (0, cloudinary_1.cloudinaryUpload)(file);
             url = secure_url;
             const splitUrl = secure_url.split("/");
             const fileName = splitUrl[splitUrl.length - 1];
-            // 6. Wrap database update inside $transaction
             const updatedTx = yield prisma_1.default.$transaction((txClient) => __awaiter(this, void 0, void 0, function* () {
-                // Update transaction with payment proof and status inside the transaction
                 const updatedTransaction = yield txClient.transaction.update({
                     where: { id: id },
                     data: {
-                        payment_proof: fileName, // Save the secure URL in the database
+                        payment_proof: fileName,
                         status: client_1.transaction_status.waiting_for_admin_confirmation,
                         updated_at: new Date(),
                     },
@@ -216,7 +202,6 @@ function PaymentTransactionService(_a) {
         }
     });
 }
-//Event Organizer Action Confirm or Reject
 function EOActionTransactionService(param) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
@@ -460,7 +445,6 @@ function EOActionTransactionService(param) {
         }
     });
 }
-// Expire Transactions that have not received payment proof within 2 hours
 function AutoExpireTransactionService() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
@@ -486,43 +470,36 @@ function AutoCancelTransactionService() {
             console.log("function auto cancel berjalan");
             const now = new Date();
             const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
-            // 1. Find all transactions still pending admin confirmation for 3+ days
             const staleTransactions = yield prisma_1.default.transaction.findMany({
                 where: {
                     status: client_1.transaction_status.waiting_for_admin_confirmation,
                     updated_at: { lt: threeDaysAgo },
                 },
             });
-            // Rollback all transactions
             for (const tx of staleTransactions) {
                 yield prisma_1.default.$transaction((txClient) => __awaiter(this, void 0, void 0, function* () {
-                    // a) Restore seats
                     yield txClient.event.update({
                         where: { id: tx.event_id },
                         data: { remaining_seats: { increment: tx.quantity } },
                     });
-                    // b) Refund coupon usage
                     if (tx.coupon_id) {
                         yield txClient.coupon.update({
                             where: { id: tx.coupon_id },
                             data: { use_count: { decrement: 1 } },
                         });
                     }
-                    // c) Refund voucher usage
                     if (tx.voucher_id) {
                         yield txClient.voucher.update({
                             where: { id: tx.voucher_id },
                             data: { usage_amount: { decrement: 1 } },
                         });
                     }
-                    // d) Mark points unused
                     if (tx.points_id) {
                         yield txClient.points.update({
                             where: { id: tx.points_id },
                             data: { is_used: false },
                         });
                     }
-                    // e) Finally cancel the transaction
                     yield txClient.transaction.update({
                         where: { id: tx.id },
                         data: { status: client_1.transaction_status.canceled, updated_at: new Date() },
@@ -538,7 +515,6 @@ function AutoCancelTransactionService() {
 function GetUserTicketsService(userId) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            // Get all tickets belonging to the user with transaction and event details
             const tickets = yield prisma_1.default.ticket.findMany({
                 where: {
                     user_id: userId,
@@ -665,7 +641,6 @@ function GetTransactionByIdService(transactionId, userId) {
 }
 function GenerateFreeTicketService(id, user_id) {
     return __awaiter(this, void 0, void 0, function* () {
-        // Find transaction including tickets
         const tx = yield prisma_1.default.transaction.findUnique({
             where: { id },
             include: { tickets: true },

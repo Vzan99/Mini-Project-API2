@@ -13,7 +13,6 @@ async function CreateVoucherService(param: ICreateVoucher) {
       max_usage,
     } = param;
 
-    // --- Basic format and value validation ---
     if (
       !voucher_code ||
       voucher_code.trim() === "" ||
@@ -32,7 +31,7 @@ async function CreateVoucherService(param: ICreateVoucher) {
       throw new Error("Max usage must be greater than zero.");
     }
 
-    // 3. If start and end are the same day, end time must be after start time
+    //If start and end are the same day, end time must be after start time
     const sameDay =
       voucher_start_date.toDateString() === voucher_end_date.toDateString();
     if (sameDay && voucher_end_date.getTime() <= voucher_start_date.getTime()) {
@@ -53,7 +52,6 @@ async function CreateVoucherService(param: ICreateVoucher) {
       throw new Error("Voucher code already exists.");
     }
 
-    // --- Check event ---
     const event = await prisma.event.findUnique({ where: { id: event_id } });
     if (!event) {
       throw new Error("Event not found.");
@@ -78,7 +76,7 @@ async function CreateVoucherService(param: ICreateVoucher) {
       );
     }
 
-    // --- Create the voucher ---
+    // Create the vouche
     const voucher = await prisma.voucher.create({
       data: {
         event_id,
@@ -116,7 +114,6 @@ async function CheckVoucherValidityService(
       },
     });
 
-    // If voucher doesn't exist
     if (!voucher) {
       return {
         is_valid: false,
@@ -163,7 +160,6 @@ async function CheckVoucherValidityService(
       };
     }
 
-    // Voucher is valid
     return {
       is_valid: true,
       message: "Voucher is valid",

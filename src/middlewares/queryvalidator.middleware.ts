@@ -5,7 +5,6 @@ export default function QueryValidator(schema: ZodTypeAny) {
   return (req: Request, res: Response, next: NextFunction) => {
     try {
       const parsed = schema.parse(req.query);
-      // Store validated query in a custom property
       (req as any).validatedQuery = parsed;
       next();
     } catch (err) {

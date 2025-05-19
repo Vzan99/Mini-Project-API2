@@ -7,13 +7,8 @@ import {
 } from "../interfaces/transaction.interface";
 import { cloudinaryRemove, cloudinaryUpload } from "../utils/cloudinary";
 import { randomBytes } from "crypto";
-
-import path from "path";
-import fs from "fs";
 import { transporter } from "../utils/nodemailer";
-import handlebars from "handlebars";
 
-//Create Transaction (Click "BuyTicket" Button from event details page)
 async function CreateTransactionService(param: ICreateTransactionParam) {
   const {
     user_id,
@@ -54,7 +49,6 @@ async function CreateTransactionService(param: ICreateTransactionParam) {
   let pointsDiscount = 0;
   let pointsToUse: string[] = [];
 
-  // --- Coupon ---
   if (coupon_id) {
     const coupon = await prisma.coupon.findUnique({ where: { id: coupon_id } });
     if (
@@ -69,7 +63,6 @@ async function CreateTransactionService(param: ICreateTransactionParam) {
     couponDiscount = coupon.discount_amount;
   }
 
-  // --- Voucher ---
   if (voucher_id) {
     const voucher = await prisma.voucher.findUnique({
       where: { id: voucher_id },
@@ -86,7 +79,6 @@ async function CreateTransactionService(param: ICreateTransactionParam) {
     voucherDiscount = voucher.discount_amount;
   }
 
-  // --- Points ---
   if (points_used && points_used > 0) {
     const availablePoints = await prisma.points.findMany({
       where: {
@@ -95,7 +87,7 @@ async function CreateTransactionService(param: ICreateTransactionParam) {
         is_expired: false,
         expires_at: { gt: now },
       },
-      orderBy: { expires_at: "asc" }, // use oldest points first
+      orderBy: { expires_at: "asc" },
     });
 
     let totalAvailable = 0;
@@ -112,7 +104,6 @@ async function CreateTransactionService(param: ICreateTransactionParam) {
     pointsDiscount = points_used;
   }
 
-  // --- Final pricing ---
   const originalAmount = event.price * quantity;
   const totalDiscount = couponDiscount + voucherDiscount + pointsDiscount;
   const finalAmount = Math.max(0, originalAmount - totalDiscount);
@@ -127,7 +118,6 @@ async function CreateTransactionService(param: ICreateTransactionParam) {
     expiresAt = new Date(now.getTime() + 2 * 60 * 60 * 1000);
   }
 
-  // --- Transaction ---
   const tx = await prisma.$transaction(async (tx) => {
     const transaction = await tx.transaction.create({
       data: {
@@ -178,7 +168,6 @@ async function CreateTransactionService(param: ICreateTransactionParam) {
   return tx;
 }
 
-//Customer upload Payment Proof, and then change the status to "waiting_for_admin_confirmation"
 async function PaymentTransactionService({
   id,
   user_id,
@@ -186,7 +175,6 @@ async function PaymentTransactionService({
 }: IPaymentTransactionParam) {
   let url = "";
   try {
-    // 1. Get the transaction
     const tx = await prisma.transaction.findUnique({
       where: { id: id },
     });
@@ -195,17 +183,14 @@ async function PaymentTransactionService({
       throw new Error("Transaction not found");
     }
 
-    // 2. Check ownership
     if (tx.user_id !== user_id) {
       throw new Error("You are not authorized to confirm this transaction");
     }
 
-    // 3. Must be in the correct status
     if (tx.status !== transaction_status.waiting_for_payment) {
       throw new Error("Transaction is not awaiting payment");
     }
 
-    // 4. Check if expired
     if (tx.expires_at && tx.expires_at < new Date()) {
       await prisma.transaction.update({
         where: { id: id },
@@ -215,19 +200,16 @@ async function PaymentTransactionService({
       throw new Error("Transaction has expired");
     }
 
-    // 5. Upload to Cloudinary
     const { secure_url } = await cloudinaryUpload(file);
     url = secure_url;
     const splitUrl = secure_url.split("/");
     const fileName = splitUrl[splitUrl.length - 1];
 
-    // 6. Wrap database update inside $transaction
     const updatedTx = await prisma.$transaction(async (txClient) => {
-      // Update transaction with payment proof and status inside the transaction
       const updatedTransaction = await txClient.transaction.update({
         where: { id: id },
         data: {
-          payment_proof: fileName, // Save the secure URL in the database
+          payment_proof: fileName,
           status: transaction_status.waiting_for_admin_confirmation,
           updated_at: new Date(),
         },
@@ -243,7 +225,6 @@ async function PaymentTransactionService({
   }
 }
 
-//Event Organizer Action Confirm or Reject
 async function EOActionTransactionService(param: IEOActionTransactionParam) {
   try {
     const { id, user_id, action } = param;
@@ -513,7 +494,6 @@ async function EOActionTransactionService(param: IEOActionTransactionParam) {
   }
 }
 
-// Expire Transactions that have not received payment proof within 2 hours
 async function AutoExpireTransactionService() {
   try {
     console.log("function auto expire berjalan");
@@ -538,7 +518,6 @@ async function AutoCancelTransactionService() {
     const now = new Date();
     const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
 
-    // 1. Find all transactions still pending admin confirmation for 3+ days
     const staleTransactions = await prisma.transaction.findMany({
       where: {
         status: transaction_status.waiting_for_admin_confirmation,
@@ -546,16 +525,13 @@ async function AutoCancelTransactionService() {
       },
     });
 
-    // Rollback all transactions
     for (const tx of staleTransactions) {
       await prisma.$transaction(async (txClient) => {
-        // a) Restore seats
         await txClient.event.update({
           where: { id: tx.event_id },
           data: { remaining_seats: { increment: tx.quantity } },
         });
 
-        // b) Refund coupon usage
         if (tx.coupon_id) {
           await txClient.coupon.update({
             where: { id: tx.coupon_id },
@@ -563,7 +539,6 @@ async function AutoCancelTransactionService() {
           });
         }
 
-        // c) Refund voucher usage
         if (tx.voucher_id) {
           await txClient.voucher.update({
             where: { id: tx.voucher_id },
@@ -571,7 +546,6 @@ async function AutoCancelTransactionService() {
           });
         }
 
-        // d) Mark points unused
         if (tx.points_id) {
           await txClient.points.update({
             where: { id: tx.points_id },
@@ -579,7 +553,6 @@ async function AutoCancelTransactionService() {
           });
         }
 
-        // e) Finally cancel the transaction
         await txClient.transaction.update({
           where: { id: tx.id },
           data: { status: transaction_status.canceled, updated_at: new Date() },
@@ -593,7 +566,6 @@ async function AutoCancelTransactionService() {
 
 async function GetUserTicketsService(userId: string) {
   try {
-    // Get all tickets belonging to the user with transaction and event details
     const tickets = await prisma.ticket.findMany({
       where: {
         user_id: userId,
@@ -732,7 +704,6 @@ async function GetTransactionByIdService(
 }
 
 async function GenerateFreeTicketService(id: string, user_id: string) {
-  // Find transaction including tickets
   const tx = await prisma.transaction.findUnique({
     where: { id },
     include: { tickets: true },

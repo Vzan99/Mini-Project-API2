@@ -12,7 +12,7 @@ export const CreateTransactionSchema = z
       required_error: "Attend date is required",
       invalid_type_error: "Attend date must be a valid date",
     }),
-    payment_method: z.string().min(1, "Payment method is required"), // Changed from enum to string
+    payment_method: z.string().min(1, "Payment method is required"), 
     voucher_id: z.string().uuid("Invalid voucher ID format").optional(),
     coupon_id: z.string().uuid("Invalid coupon ID format").optional(),
     points_used: z.number().int().positive().optional(),
@@ -32,7 +32,7 @@ export const EOActionSchema = z.object({
 });
 
 export const PaymentParamSchema = z.object({
-  id: z.string().uuid(), // From req.params
+  id: z.string().uuid(), 
 });
 
 export const QRISPaymentSchema = z.object({

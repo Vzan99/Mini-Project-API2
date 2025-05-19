@@ -6,7 +6,6 @@ function QueryValidator(schema) {
     return (req, res, next) => {
         try {
             const parsed = schema.parse(req.query);
-            // Store validated query in a custom property
             req.validatedQuery = parsed;
             next();
         }
